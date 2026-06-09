@@ -12,7 +12,9 @@
       "Bash(printf 'node_modules/\\\\n.DS_Store\\\\n*.log\\\\n')",
       "Bash(git add *)",
       "Bash(git commit -q -m 'Step 1: split into index.html + styles.css + data.js + game.js *)",
-      "Bash(git commit -q -m 'Step 2: localStorage save/load + Settings panel *)"
+      "Bash(git commit -q -m 'Step 2: localStorage save/load + Settings panel *)",
+      "Bash(node validate.js)",
+      "Bash(git commit -q -m 'Step 3: economy + Pickup Tailgate Tackle Shop *)"
     ]
   }
 }

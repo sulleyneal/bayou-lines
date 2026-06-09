@@ -14,6 +14,8 @@
   const state = {
     phase: "idle",                 // idle | waiting | nibble | bite (transient, not saved)
     locationId: "darbonne",        // (travel arrives in a later step)
+    bucks: 0,
+    equip: { rod: 0, line: 0, lure: 0, boat: 0 },
     stats: { catches: 0, junk: 0, pb: 0, pbName: "" },
     log: [],
     settings: { muted: false, volume: 0.6 },
@@ -22,7 +24,7 @@
   /* ---------- PERSISTENCE ----------
      Everything but the transient `phase` is saved. Loading deep-merges
      onto defaults so old saves survive new fields in future versions. */
-  const SAVE_FIELDS = ["locationId", "stats", "log", "settings"];
+  const SAVE_FIELDS = ["locationId", "bucks", "equip", "stats", "log", "settings"];
   let saveLocked = false; // true during reset, so nothing re-saves stale data
 
   function save() {
@@ -77,20 +79,53 @@
     return out;
   }
 
+  // Equipment accessors — single source of truth for current gear.
+  function rod()  { return D.EQUIPMENT.rod[state.equip.rod]; }
+  function lineG(){ return D.EQUIPMENT.line[state.equip.line]; }
+  function lure() { return D.EQUIPMENT.lure[state.equip.lure]; }
+  function boat() { return D.EQUIPMENT.boat[state.equip.boat]; }
+
+  const CLASS_RANK = { common: 0, trophy: 1, legendary: 2 };
+
   function pickFish() {
     const table = catchTable();
-    const total = table.reduce((s, e) => s + e.weight, 0);
+    const lr = lure();
+    const maxW = table.reduce((m, e) => Math.max(m, e.weight), 0);
+    // Apply lure species-bias and a rarity tilt: rarer (lower base weight)
+    // entries get nudged up as lures improve.
+    const weighted = table.map(e => {
+      let w = e.weight * (lr.bias[refKey(e.def)] || 1);
+      w *= 1 + lr.rarityBoost * ((maxW - e.weight) / maxW);
+      return { def: e.def, w };
+    });
+    const total = weighted.reduce((s, e) => s + e.w, 0);
     let r = Math.random() * total;
-    for (const e of table) { if ((r -= e.weight) <= 0) return e.def; }
-    return table[0].def;
+    for (const e of weighted) { if ((r -= e.w) <= 0) return e.def; }
+    return weighted[0].def;
   }
 
-  function pickJunk() {
-    const keys = loc().junk;
-    return D.JUNK[pick(keys)];
+  // reverse-lookup a species/legendary key for lure bias matching
+  function refKey(def) {
+    for (const k in D.S) if (D.S[k] === def) return k;
+    for (const k in D.L) if (D.L[k] === def) return k;
+    return null;
   }
 
-  function junkChance() { return 0.22; } // lures shift this in a later step
+  function pickJunk() { return D.JUNK[pick(loc().junk)]; }
+  function junkChance() { return lure().junkChance; }
+
+  // Does this fish break off? Gentle by design: only big-for-your-gear fish,
+  // and a heavier line forgives a lot. Wrong line class = it tests you and leaves.
+  function breakOff(f, w) {
+    if (CLASS_RANK[f.cls] > CLASS_RANK[lineG().maxClass]) return true;
+    if (w <= rod().maxWeight) return false;
+    const over = Math.min((w - rod().maxWeight) / rod().maxWeight, 0.9);
+    return Math.random() < over * (1 - lineG().breakResist);
+  }
+
+  function payout(f, w) {
+    return Math.max(1, Math.round(w * f.value));
+  }
 
   /* ---------- AMBIENT SCENERY ---------- */
   function scatter() {
@@ -177,7 +212,7 @@
     nibbleTimer = setTimeout(bite, rand(D.CONFIG.nibbleMs[0], D.CONFIG.nibbleMs[1]));
   }
 
-  function reelWindowMs() { return D.EQUIPMENT.rod[0].biteWindow; } // rod track wires in later
+  function reelWindowMs() { return rod().biteWindow; }
 
   function bite() {
     state.phase = "bite";
@@ -211,13 +246,26 @@
 
     if (Math.random() < junkChance()) {
       const j = pickJunk();
+      const pity = Math.round(rand(D.CONFIG.junkPity[0], D.CONFIG.junkPity[1]));
       state.stats.junk++;
+      state.bucks += pity;
       addLog({ emoji: j.emoji, name: j.name, meta: "junk" });
-      showCard(j.emoji, "junk haul", j.name, "non-aquatic · released back to society", "", pick([].concat(j.flavor)), "junk");
+      showCard(j.emoji, "junk haul", j.name, "non-aquatic · released back to society",
+        "+" + pity + " ₿ · the parish pays for litter removal, technically", pick([].concat(j.flavor)), "junk");
     } else {
       const f = pickFish();
       const w = +rand(f.w[0], f.w[1]).toFixed(1);
+      if (breakOff(f, w)) {
+        addLog({ emoji: "〰️", name: "The one that got away", meta: "snap" });
+        showCard("〰️", "got away", "The one that got away", "no harm done · no score kept",
+          "", pick(D.GENERIC.breakoff), "junk");
+        updateStats(); save();
+        setMsg("Heavier line lives at the tackle shop, when you're ready. No rush.");
+        return;
+      }
+      const bucks = payout(f, w);
       state.stats.catches++;
+      state.bucks += bucks;
       const isPB = w > state.stats.pb;
       if (isPB) { state.stats.pb = w; state.stats.pbName = f.name; }
       const badge = f.legendary ? "legendary" : "catch";
@@ -225,7 +273,7 @@
       addLog({ emoji: f.emoji, name: f.name, meta: w + " lb", pb: isPB, legend: !!f.legendary });
       showCard(f.emoji, badge, f.name,
         w + " lb · catch & release" + (isPB ? " · new personal best" : ""),
-        "", pick(f.flavor), cls);
+        "+" + bucks + " ₿", pick(f.flavor), cls);
     }
     updateStats();
     save();
@@ -241,10 +289,12 @@
   /* ---------- HUD / CARD / LOG ---------- */
   function updateStats() {
     $("stCatch").textContent = state.stats.catches;
+    $("stBucks").textContent = state.bucks;
     $("stPB").textContent = state.stats.pb ? state.stats.pb + " lb" : "—";
     const l = loc();
     $("locName").textContent = l.name;
     $("locBlurb").textContent = l.blurb;
+    if ($("shopPanel").classList.contains("open")) renderShop();
   }
 
   function showCard(emoji, badge, name, detail, value, flavor, cls) {
@@ -274,11 +324,65 @@
     ).join("");
   }
 
+  /* ---------- SHOP ---------- */
+  const TRACKS = [
+    { key: "rod",  icon: "🎣", title: "Rod", desc: "longer reel window, bigger fish you can land clean",
+      stat: t => `reel window ${(t.biteWindow/1000).toFixed(1)}s · lands ${t.maxWeight >= 999 ? "anything" : "≤" + t.maxWeight + " lb"}` },
+    { key: "line", icon: "🧵", title: "Line", desc: "fewer break-offs on the big ones; heavier line lands rarer classes",
+      stat: t => `${Math.round(t.breakResist*100)}% break resistance · up to ${t.maxClass} class` },
+    { key: "lure", icon: "🪝", title: "Lures & Bait", desc: "less junk, better odds, and a nudge toward certain fish",
+      stat: t => `${Math.round(t.junkChance*100)}% junk · +${Math.round(t.rarityBoost*100)}% toward the rare stuff` },
+    { key: "boat", icon: "🛥️", title: "Boat", desc: "the gate to bigger water — see the Travel map",
+      stat: t => `boat tier ${t.tier}` },
+  ];
+
+  function renderShop() {
+    $("shopBucks").textContent = state.bucks;
+    $("shopBody").innerHTML = TRACKS.map(tr => {
+      const tiers = D.EQUIPMENT[tr.key];
+      const owned = state.equip[tr.key];
+      const rows = tiers.map((t, i) => {
+        let tag = "", btn = "", rowCls = "";
+        if (i < owned) { rowCls = "owned"; tag = '<span class="tag owned">owned</span>'; }
+        else if (i === owned) { rowCls = "current"; tag = '<span class="tag current">equipped</span>'; }
+        else if (i === owned + 1) {
+          const afford = state.bucks >= t.price;
+          btn = `<button class="buyBtn" data-track="${tr.key}" data-tier="${i}" ${afford ? "" : "disabled"}>${t.price} ₿</button>`;
+        } else { rowCls = "locked"; tag = '<span class="tag">locked</span>'; }
+        return `<div class="tierRow ${rowCls}">
+            <div class="tier-body">
+              <div class="tier-name">${t.name}</div>
+              <div class="tier-flavor">${t.flavor}</div>
+              <div class="tier-stat">${tr.stat(t)}</div>
+            </div>${tag}${btn}
+          </div>`;
+      }).join("");
+      return `<div class="shopTrack"><h3>${tr.icon} ${tr.title}</h3>
+        <div class="track-desc">${tr.desc}</div>${rows}</div>`;
+    }).join("");
+    $("shopBody").querySelectorAll(".buyBtn").forEach(b =>
+      b.addEventListener("click", () => buy(b.dataset.track, +b.dataset.tier)));
+  }
+
+  function buy(track, tier) {
+    if (tier !== state.equip[track] + 1) return;      // only the next tier
+    const t = D.EQUIPMENT[track][tier];
+    if (state.bucks < t.price) return;
+    state.bucks -= t.price;
+    state.equip[track] = tier;
+    save();
+    updateStats();
+    renderShop();
+    if (window.BayouAudio) window.BayouAudio.chime();
+    setMsg(`New gear: <b>${t.name}</b>.`, "broke in on the next cast");
+  }
+
   /* ---------- PANELS (generic open/close) ---------- */
   function openPanel(id) { $(id).classList.add("open"); }
   function closePanel(id) { $(id).classList.remove("open"); }
   function closeAllPanels() { document.querySelectorAll(".panel.open").forEach(p => p.classList.remove("open")); }
   $("logBtn").addEventListener("click", () => openPanel("logPanel"));
+  $("shopBtn").addEventListener("click", () => { renderShop(); openPanel("shopPanel"); });
   $("settingsBtn").addEventListener("click", () => openPanel("settingsPanel"));
   document.querySelectorAll(".panelClose").forEach(b =>
     b.addEventListener("click", () => closePanel(b.dataset.close)));

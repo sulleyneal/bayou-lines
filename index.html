@@ -48,6 +48,7 @@
 
 <div id="toolbar">
   <button class="toolBtn" id="logBtn">Log</button>
+  <button class="toolBtn" id="settingsBtn">⚙</button>
 </div>
 
 <div id="catchCard" role="dialog" aria-modal="false">
@@ -67,6 +68,42 @@
   <div class="p-sub">field notes · the most recent 60 stay here</div>
   <div id="logEmpty">Nothing yet. The bayou rewards patience, and also people who just sit here doing nothing. Same thing, really.</div>
   <div id="logList"></div>
+</aside>
+
+<aside id="settingsPanel" class="panel" aria-label="Settings">
+  <button class="panelClose" data-close="settingsPanel" aria-label="Close">✕</button>
+  <h2>Settings</h2>
+  <div class="p-sub">it's a porch, not a dashboard · everything saves on its own</div>
+
+  <div class="setRow">
+    <div>
+      <label for="muteToggle">Ambient sound</label>
+      <div class="set-desc">water, bugs, the occasional far-off boat</div>
+    </div>
+    <label class="switch"><input type="checkbox" id="muteToggle" checked><span class="slider"></span></label>
+  </div>
+  <div class="setRow">
+    <div>
+      <label for="volSlider">Volume</label>
+      <div class="set-desc">quiet by design</div>
+    </div>
+    <input type="range" id="volSlider" min="0" max="1" step="0.05" value="0.6">
+  </div>
+
+  <div class="setRow" style="border-bottom:none">
+    <div>
+      <label>Reset save</label>
+      <div class="set-desc">releases everything back into the bayou</div>
+    </div>
+    <button class="dangerBtn" id="resetBtn">Reset…</button>
+  </div>
+  <div id="resetConfirm" style="display:none;margin-top:6px;font-size:11.5px;color:var(--cream-dim);line-height:1.6">
+    This releases every fish, buck, and unlock back into the bayou. You sure?
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button class="dangerBtn" id="resetYes">Yes, release it all</button>
+      <button class="toolBtn" id="resetNo">Never mind</button>
+    </div>
+  </div>
 </aside>
 
 <div id="toasts" aria-live="polite"></div>

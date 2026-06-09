@@ -12,11 +12,53 @@
 
   /* ---------- STATE ---------- */
   const state = {
-    phase: "idle",                 // idle | waiting | nibble | bite
+    phase: "idle",                 // idle | waiting | nibble | bite (transient, not saved)
     locationId: "darbonne",        // (travel arrives in a later step)
     stats: { catches: 0, junk: 0, pb: 0, pbName: "" },
     log: [],
+    settings: { muted: false, volume: 0.6 },
   };
+
+  /* ---------- PERSISTENCE ----------
+     Everything but the transient `phase` is saved. Loading deep-merges
+     onto defaults so old saves survive new fields in future versions. */
+  const SAVE_FIELDS = ["locationId", "stats", "log", "settings"];
+  let saveLocked = false; // true during reset, so nothing re-saves stale data
+
+  function save() {
+    if (saveLocked) return;
+    try {
+      const snap = { v: 2 };
+      SAVE_FIELDS.forEach(k => { snap[k] = state[k]; });
+      localStorage.setItem(D.CONFIG.saveKey, JSON.stringify(snap));
+    } catch (e) { /* private mode / quota — game still works in-session */ }
+  }
+
+  function deepMerge(target, src) {
+    if (!src || typeof src !== "object") return;
+    for (const k in src) {
+      const v = src[k];
+      if (Array.isArray(v)) target[k] = v;
+      else if (v && typeof v === "object") { target[k] = target[k] || {}; deepMerge(target[k], v); }
+      else target[k] = v;
+    }
+  }
+
+  function load() {
+    let raw;
+    try { raw = localStorage.getItem(D.CONFIG.saveKey); } catch (e) { return; }
+    if (!raw) return;
+    try {
+      const snap = JSON.parse(raw);
+      SAVE_FIELDS.forEach(k => { if (snap[k] !== undefined) deepMerge(state, { [k]: snap[k] }); });
+    } catch (e) { /* corrupt save — start fresh rather than crash */ }
+  }
+
+  function hardReset() {
+    saveLocked = true;
+    try { localStorage.removeItem(D.CONFIG.saveKey); } catch (e) {}
+    location.reload();
+  }
   let biteTimer = null, nibbleTimer = null, missTimer = null, idleTicker = null;
   let bobberPos = { x: 0, y: 0 };
 
@@ -186,6 +228,7 @@
         "", pick(f.flavor), cls);
     }
     updateStats();
+    save();
     setMsg("Back to the water whenever you're ready. No rush. Genuinely none.");
   }
 
@@ -236,8 +279,29 @@
   function closePanel(id) { $(id).classList.remove("open"); }
   function closeAllPanels() { document.querySelectorAll(".panel.open").forEach(p => p.classList.remove("open")); }
   $("logBtn").addEventListener("click", () => openPanel("logPanel"));
+  $("settingsBtn").addEventListener("click", () => openPanel("settingsPanel"));
   document.querySelectorAll(".panelClose").forEach(b =>
     b.addEventListener("click", () => closePanel(b.dataset.close)));
+
+  /* ---------- SETTINGS ---------- */
+  function applySettingsUI() {
+    $("muteToggle").checked = !state.settings.muted;
+    $("volSlider").value = state.settings.volume;
+  }
+  $("muteToggle").addEventListener("change", e => {
+    state.settings.muted = !e.target.checked;
+    save();
+    if (window.BayouAudio) window.BayouAudio.setMuted(state.settings.muted);
+  });
+  $("volSlider").addEventListener("input", e => {
+    state.settings.volume = +e.target.value;
+    save();
+    if (window.BayouAudio) window.BayouAudio.setVolume(state.settings.volume);
+  });
+  // reset flow: bury it behind a confirm step
+  $("resetBtn").addEventListener("click", () => { $("resetConfirm").style.display = "block"; $("resetBtn").style.display = "none"; });
+  $("resetNo").addEventListener("click", () => { $("resetConfirm").style.display = "none"; $("resetBtn").style.display = ""; });
+  $("resetYes").addEventListener("click", hardReset);
 
   /* ---------- INPUT ---------- */
   function act(x, y) {
@@ -267,7 +331,14 @@
   });
 
   /* ---------- BOOT ---------- */
+  load();
   scatter();
+  applySettingsUI();
   updateStats();
   renderLog();
+  // A returning player should land exactly where they left off.
+  if (state.stats.catches || state.stats.junk) {
+    setMsg("Right where you left it. The fish kept your spot warm.",
+           "cast whenever — the bayou waited");
+  }
 })();

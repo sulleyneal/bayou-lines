@@ -94,9 +94,11 @@
     const maxW = table.reduce((m, e) => Math.max(m, e.weight), 0);
     // Apply lure species-bias and a rarity tilt: rarer (lower base weight)
     // entries get nudged up as lures improve.
+    const ph = phaseId;
     const weighted = table.map(e => {
       let w = e.weight * (lr.bias[refKey(e.def)] || 1);
       w *= 1 + lr.rarityBoost * ((maxW - e.weight) / maxW);
+      if (e.def.time && e.def.time.includes(ph)) w *= D.CONFIG.timeBiasMult; // bite better now
       return { def: e.def, w };
     });
     const total = weighted.reduce((s, e) => s + e.w, 0);
@@ -125,7 +127,8 @@
   }
 
   function payout(f, w) {
-    return Math.max(1, Math.round(w * f.value));
+    const currentBonus = loc().current ? 1.15 : 1; // rivers pay a little extra
+    return Math.max(1, Math.round(w * f.value * currentBonus));
   }
 
   /* ---------- AMBIENT SCENERY ---------- */
@@ -138,13 +141,21 @@
       s.style.animationDelay = (Math.random() * 6) + "s";
       water.appendChild(s);
     }
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < 14; i++) { // a few extra for the night crowd
       const f = document.createElement("div"); f.className = "firefly";
       f.style.left = (Math.random() * 92) + "%";
       f.style.top = (34 + Math.random() * 40) + "%";
       f.style.animationDelay = (Math.random() * 8) + "s, " + (Math.random() * 3) + "s";
       f.style.animationDuration = (10 + Math.random() * 10) + "s, " + (2.6 + Math.random() * 2) + "s";
       scene.appendChild(f);
+    }
+    const starWrap = $("stars");
+    for (let i = 0; i < 60; i++) {
+      const s = document.createElement("div"); s.className = "star";
+      s.style.left = (Math.random() * 100) + "%";
+      s.style.top = (Math.random() * 92) + "%";
+      s.style.animationDelay = (Math.random() * 4) + "s";
+      starWrap.appendChild(s);
     }
   }
 
@@ -160,14 +171,12 @@
   }
 
   /* ---------- IDLE FLAVOR ---------- */
-  function idleLine() {
-    const l = loc();
-    return pick(l.idle.concat(D.GENERIC.nibble.length ? [] : []));
-  }
   function startIdleTicker() {
     stopIdleTicker();
     idleTicker = setInterval(() => {
-      if (state.phase === "waiting") setMsg(pick(loc().idle));
+      if (state.phase !== "waiting") return;
+      // mostly location color, occasionally a gentle time-of-day hint
+      setMsg(Math.random() < 0.3 ? currentPhase().hint : pick(loc().idle));
     }, 7000);
   }
   function stopIdleTicker() { if (idleTicker) { clearInterval(idleTicker); idleTicker = null; } }
@@ -213,7 +222,9 @@
     nibbleTimer = setTimeout(bite, rand(D.CONFIG.nibbleMs[0], D.CONFIG.nibbleMs[1]));
   }
 
-  function reelWindowMs() { return rod().biteWindow; }
+  function reelWindowMs() {
+    return rod().biteWindow * (loc().current ? D.CONFIG.currentBias : 1); // current = slightly snappier
+  }
 
   function bite() {
     state.phase = "bite";
@@ -325,6 +336,65 @@
       '<span class="le-name">' + e.name + '</span>' +
       '<span class="le-meta">' + e.meta + '</span></div>'
     ).join("");
+  }
+
+  /* ---------- DAY / NIGHT ----------
+     A slow real-time loop (~20 min). The per-location gradients are the
+     "golden-hour reference"; here we modulate them with a CSS filter,
+     fade stars/sun, and nudge the catch table by time of day. */
+  let phaseId = "dusk";
+
+  function dayFraction() {
+    return (Date.now() % D.CONFIG.dayLengthMs) / D.CONFIG.dayLengthMs;
+  }
+  function currentPhase() {
+    const f = dayFraction();
+    let p = D.PHASES[0];
+    for (const ph of D.PHASES) if (f >= ph.from) p = ph;
+    return p;
+  }
+
+  // filter keyframes across the day; we lerp between the surrounding two.
+  const LIGHT_KEYS = [
+    { f: 0.00, b: 0.70, s: 0.92, h: -8,  dark: 0.7 }, // dawn
+    { f: 0.18, b: 1.05, s: 1.00, h: 0,   dark: 0.0 }, // midday
+    { f: 0.55, b: 1.00, s: 1.16, h: 10,  dark: 0.1 }, // golden hour
+    { f: 0.72, b: 0.82, s: 1.10, h: 6,   dark: 0.4 }, // dusk
+    { f: 0.82, b: 0.52, s: 0.82, h: -10, dark: 0.85 }, // night
+    { f: 1.00, b: 0.70, s: 0.92, h: -8,  dark: 0.7 }, // wrap to dawn
+  ];
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function lightAt(f) {
+    for (let i = 0; i < LIGHT_KEYS.length - 1; i++) {
+      const k0 = LIGHT_KEYS[i], k1 = LIGHT_KEYS[i + 1];
+      if (f >= k0.f && f <= k1.f) {
+        const t = (f - k0.f) / (k1.f - k0.f);
+        return { b: lerp(k0.b, k1.b, t), s: lerp(k0.s, k1.s, t), h: lerp(k0.h, k1.h, t), dark: lerp(k0.dark, k1.dark, t) };
+      }
+    }
+    return LIGHT_KEYS[0];
+  }
+
+  function applyDayNight() {
+    const f = dayFraction();
+    const L = lightAt(f);
+    $("scene").style.filter = `brightness(${L.b.toFixed(3)}) saturate(${L.s.toFixed(3)}) hue-rotate(${L.h.toFixed(1)}deg)`;
+    $("stars").style.opacity = Math.max(0, (L.dark - 0.45) / 0.55).toFixed(2);
+    // sun rides high at midday, sinks and fades into the night
+    const sunUp = Math.max(0, 1 - L.dark * 1.3);
+    $("sun").style.opacity = sunUp.toFixed(2);
+    $("sun").style.transform = `translateY(${((1 - sunUp) * 120).toFixed(0)}px)`;
+    document.body.classList.toggle("dark", L.dark > 0.45);
+
+    const ph = currentPhase();
+    if (ph.id !== phaseId) phaseId = ph.id;
+    $("timeChip").textContent = ph.label;
+    $("timeChip").title = ph.hint;
+  }
+
+  function startDayNight() {
+    applyDayNight();
+    setInterval(applyDayNight, 4000); // smooth enough with the 2.4s CSS transition
   }
 
   /* ---------- THEMING ---------- */
@@ -528,6 +598,7 @@
   if (!isUnlocked(state.locationId)) state.locationId = "pond"; // safety net
   scatter();
   applySettingsUI();
+  startDayNight();
   applyTheme(loc());
   updateStats();
   renderLog();

@@ -30,7 +30,9 @@ body{
 }
 
 /* ============ SCENE ============ */
-#scene{position:fixed;inset:0;cursor:pointer}
+#scene{position:fixed;inset:0;cursor:pointer;transition:filter 2.4s linear}
+/* fireflies only come out once the light goes; stars likewise */
+body:not(.dark) .firefly{opacity:0 !important;animation:none}
 #sky{
   position:absolute;left:0;right:0;top:0;height:46%;
   background:linear-gradient(to bottom,var(--sky-deep) 0%,#8a4f4a 45%,var(--dusk-hi) 78%,#f7c98b 100%);

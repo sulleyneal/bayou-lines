@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bayou Lines — a slow fishing game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="scene" aria-label="Bayou at dusk. Click the water to cast.">
+  <div id="sky"><div id="sun"></div></div>
+  <div id="stars"></div>
+
+  <!-- cypress silhouettes -->
+  <svg class="cypress" style="left:-2%;height:62%;width:auto" viewBox="0 0 200 400" preserveAspectRatio="xMinYMax meet" aria-hidden="true">
+    <path d="M95 400 L95 180 Q70 160 60 110 Q90 130 95 100 Q60 80 70 30 Q95 70 100 20 Q105 70 130 30 Q140 80 105 100 Q110 130 140 110 Q130 160 105 180 L105 400 Z"/>
+    <path d="M40 400 L40 260 Q20 245 15 210 Q35 225 40 200 Q15 185 22 150 Q40 180 44 140 Q48 180 66 150 Q73 185 48 200 Q53 225 73 210 Q68 245 48 260 L48 400 Z" opacity=".85"/>
+    <ellipse cx="95" cy="396" rx="120" ry="10" opacity=".5"/>
+  </svg>
+  <svg class="cypress" style="right:-1%;height:48%;width:auto;transform:scaleX(-1)" viewBox="0 0 200 400" preserveAspectRatio="xMinYMax meet" aria-hidden="true">
+    <path d="M95 400 L95 180 Q70 160 60 110 Q90 130 95 100 Q60 80 70 30 Q95 70 100 20 Q105 70 130 30 Q140 80 105 100 Q110 130 140 110 Q130 160 105 180 L105 400 Z" opacity=".9"/>
+  </svg>
+
+  <div id="water"></div>
+  <div id="line"></div>
+  <div id="bobber"></div>
+</div>
+
+<header id="hud">
+  <div>
+    <h1>Bayou <em>Lines</em></h1>
+    <div id="subtitle">at <span id="locName">Lake D'Arbonne</span> · <span id="locBlurb">no deadlines out here</span></div>
+  </div>
+  <div id="stats" aria-live="polite">
+    <span id="timeChip">dusk</span><br>
+    bucks <b id="stBucks">0</b><br>
+    catches <b id="stCatch">0</b><br>
+    biggest <b id="stPB">—</b>
+  </div>
+</header>
+
+<div id="message" aria-live="polite">Click anywhere on the water to cast.<span class="sub">or press space — the fish don't mind either way</span></div>
+
+<button id="actionBtn">Cast a line</button>
+
+<div id="toolbar">
+  <button class="toolBtn" id="logBtn">Log</button>
+</div>
+
+<div id="catchCard" role="dialog" aria-modal="false">
+  <span id="catchEmoji"></span>
+  <div><span class="badge" id="catchBadge"></span></div>
+  <div id="catchName"></div>
+  <div id="catchDetail"></div>
+  <div id="catchValue"></div>
+  <div id="catchFlavor"></div>
+  <button id="catchClose">Back to the water</button>
+</div>
+
+<!-- ============ PANELS ============ -->
+<aside id="logPanel" class="panel" aria-label="Catch log">
+  <button class="panelClose" data-close="logPanel" aria-label="Close">✕</button>
+  <h2>Catch Log</h2>
+  <div class="p-sub">field notes · the most recent 60 stay here</div>
+  <div id="logEmpty">Nothing yet. The bayou rewards patience, and also people who just sit here doing nothing. Same thing, really.</div>
+  <div id="logList"></div>
+</aside>
+
+<div id="toasts" aria-live="polite"></div>
+
+<script src="data.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

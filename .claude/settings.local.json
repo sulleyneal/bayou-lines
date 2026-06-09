@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude update *)",
+      "Bash(winget upgrade *)",
+      "Bash(git init *)",
+      "Bash(git config *)",
+      "Bash(node --version)",
+      "Bash(node --check data.js)",
+      "Bash(node --check game.js)",
+      "Bash(node -e ' *)",
+      "Bash(printf 'node_modules/\\\\n.DS_Store\\\\n*.log\\\\n')",
+      "Bash(git add *)",
+      "Bash(git commit -q -m 'Step 1: split into index.html + styles.css + data.js + game.js *)"
+    ]
+  }
+}

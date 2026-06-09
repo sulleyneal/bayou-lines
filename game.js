@@ -13,10 +13,11 @@
   /* ---------- STATE ---------- */
   const state = {
     phase: "idle",                 // idle | waiting | nibble | bite (transient, not saved)
-    locationId: "darbonne",        // (travel arrives in a later step)
+    locationId: "pond",            // everybody starts at the pond
+    unlocked: ["pond"],
     bucks: 0,
     equip: { rod: 0, line: 0, lure: 0, boat: 0 },
-    stats: { catches: 0, junk: 0, pb: 0, pbName: "" },
+    stats: { catches: 0, junk: 0, pb: 0, pbName: "", perLoc: {} },
     log: [],
     settings: { muted: false, volume: 0.6 },
   };
@@ -24,7 +25,7 @@
   /* ---------- PERSISTENCE ----------
      Everything but the transient `phase` is saved. Loading deep-merges
      onto defaults so old saves survive new fields in future versions. */
-  const SAVE_FIELDS = ["locationId", "bucks", "equip", "stats", "log", "settings"];
+  const SAVE_FIELDS = ["locationId", "unlocked", "bucks", "equip", "stats", "log", "settings"];
   let saveLocked = false; // true during reset, so nothing re-saves stale data
 
   function save() {
@@ -265,6 +266,7 @@
       }
       const bucks = payout(f, w);
       state.stats.catches++;
+      state.stats.perLoc[state.locationId] = (state.stats.perLoc[state.locationId] || 0) + 1;
       state.bucks += bucks;
       const isPB = w > state.stats.pb;
       if (isPB) { state.stats.pb = w; state.stats.pbName = f.name; }
@@ -295,6 +297,7 @@
     $("locName").textContent = l.name;
     $("locBlurb").textContent = l.blurb;
     if ($("shopPanel").classList.contains("open")) renderShop();
+    if ($("travelPanel").classList.contains("open")) renderTravel();
   }
 
   function showCard(emoji, badge, name, detail, value, flavor, cls) {
@@ -322,6 +325,91 @@
       '<span class="le-name">' + e.name + '</span>' +
       '<span class="le-meta">' + e.meta + '</span></div>'
     ).join("");
+  }
+
+  /* ---------- THEMING ---------- */
+  function applyTheme(l) {
+    $("sky").style.background = l.palette.sky;
+    $("water").style.background = l.palette.water;
+    const root = document.documentElement.style;
+    root.setProperty("--cypress", l.palette.cypress);
+    root.setProperty("--accent", l.accent);
+    if (typeof applyDayNight === "function") applyDayNight(); // step 5 re-tints on top
+  }
+
+  /* ---------- TRAVEL / UNLOCKS ---------- */
+  function boatTier() { return boat().tier; }
+  function isUnlocked(id) { return state.unlocked.includes(id); }
+
+  // Evaluate a location's unlock gate. Returns the requirement rows and
+  // whether everything's met (so we can show the player exactly what's left).
+  function gate(l) {
+    if (!l.unlock) return { open: true, rows: [] };
+    const u = l.unlock, rows = [];
+    if (u.bucks) rows.push({ met: state.bucks >= u.bucks, text: `${u.bucks} ₿ permit` });
+    if (u.boatTier) {
+      const need = D.EQUIPMENT.boat.find(b => b.tier === u.boatTier);
+      rows.push({ met: boatTier() >= u.boatTier, text: `${need ? need.name : "boat tier " + u.boatTier}` });
+    }
+    if (u.milestone) {
+      const at = D.LOCATIONS.find(x => x.id === u.milestone.at);
+      const have = state.stats.perLoc[u.milestone.at] || 0;
+      rows.push({ met: have >= u.milestone.here, text: `catch ${u.milestone.here} at ${at ? at.name : u.milestone.at} (${Math.min(have, u.milestone.here)}/${u.milestone.here})` });
+    }
+    return { open: rows.every(r => r.met), rows };
+  }
+
+  function renderTravel() {
+    $("travelBody").innerHTML = D.LOCATIONS.map(l => {
+      const here = l.id === state.locationId;
+      const unlocked = isUnlocked(l.id);
+      const g = gate(l);
+      let flag = "", body = "", cls = "";
+      if (here) { flag = '<span class="spot-flag">you are here</span>'; cls = "here"; }
+      else if (unlocked) { flag = '<span class="spot-flag" style="color:var(--good)">unlocked</span>'; }
+
+      if (unlocked) {
+        body = here ? "" : `<button class="travelBtn" data-go="${l.id}">Head over</button>`;
+      } else {
+        const reqs = g.rows.map(r => `<span class="${r.met ? "met" : "unmet"}">${r.met ? "✓" : "•"} ${r.text}</span>`).join("<br>");
+        cls = "locked";
+        body = `<div class="spot-req">${reqs}</div>` +
+          (g.open ? `<button class="travelBtn" data-unlock="${l.id}">Get the permit &amp; go</button>`
+                  : `<button class="travelBtn" disabled>locked for now</button>`);
+      }
+      return `<div class="spotCard ${cls}">
+          <div class="spot-name">${l.name} ${flag}</div>
+          <div class="spot-blurb">${l.blurb}</div>
+          ${body}
+        </div>`;
+    }).join("");
+    $("travelBody").querySelectorAll("[data-go]").forEach(b =>
+      b.addEventListener("click", () => travelTo(b.dataset.go)));
+    $("travelBody").querySelectorAll("[data-unlock]").forEach(b =>
+      b.addEventListener("click", () => unlockAndGo(b.dataset.unlock)));
+  }
+
+  function unlockAndGo(id) {
+    const l = D.LOCATIONS.find(x => x.id === id);
+    const g = gate(l);
+    if (!g.open || isUnlocked(id)) return;
+    if (l.unlock && l.unlock.bucks) state.bucks -= l.unlock.bucks; // permit cost
+    state.unlocked.push(id);
+    if (window.BayouAudio) window.BayouAudio.chime();
+    travelTo(id, true);
+  }
+
+  function travelTo(id, fresh) {
+    if (!isUnlocked(id)) return;
+    if (state.phase !== "idle") { miss(); } // reel in before we run off
+    state.locationId = id;
+    const l = D.LOCATIONS.find(x => x.id === id);
+    applyTheme(l);
+    updateStats();
+    save();
+    closePanel("travelPanel");
+    setMsg(fresh ? `Permit secured. Welcome to <b>${l.name}</b>.` : `Now fishing <b>${l.name}</b>.`,
+      pick(l.idle));
   }
 
   /* ---------- SHOP ---------- */
@@ -383,6 +471,7 @@
   function closeAllPanels() { document.querySelectorAll(".panel.open").forEach(p => p.classList.remove("open")); }
   $("logBtn").addEventListener("click", () => openPanel("logPanel"));
   $("shopBtn").addEventListener("click", () => { renderShop(); openPanel("shopPanel"); });
+  $("travelBtn").addEventListener("click", () => { renderTravel(); openPanel("travelPanel"); });
   $("settingsBtn").addEventListener("click", () => openPanel("settingsPanel"));
   document.querySelectorAll(".panelClose").forEach(b =>
     b.addEventListener("click", () => closePanel(b.dataset.close)));
@@ -436,8 +525,10 @@
 
   /* ---------- BOOT ---------- */
   load();
+  if (!isUnlocked(state.locationId)) state.locationId = "pond"; // safety net
   scatter();
   applySettingsUI();
+  applyTheme(loc());
   updateStats();
   renderLog();
   // A returning player should land exactly where they left off.

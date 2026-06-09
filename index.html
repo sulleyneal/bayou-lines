@@ -47,6 +47,7 @@
 <button id="actionBtn">Cast a line</button>
 
 <div id="toolbar">
+  <button class="toolBtn" id="travelBtn">Travel</button>
   <button class="toolBtn" id="shopBtn">Shop</button>
   <button class="toolBtn" id="logBtn">Log</button>
   <button class="toolBtn" id="settingsBtn">⚙</button>
@@ -69,6 +70,13 @@
   <div class="p-sub">field notes · the most recent 60 stay here</div>
   <div id="logEmpty">Nothing yet. The bayou rewards patience, and also people who just sit here doing nothing. Same thing, really.</div>
   <div id="logList"></div>
+</aside>
+
+<aside id="travelPanel" class="panel" aria-label="Travel map">
+  <button class="panelClose" data-close="travelPanel" aria-label="Close">✕</button>
+  <h2>Where To Today?</h2>
+  <div class="p-sub">north Louisiana water, worked from the bank on out · permits are one-time</div>
+  <div id="travelBody"></div>
 </aside>
 
 <aside id="shopPanel" class="panel" aria-label="Tackle shop">

@@ -14,7 +14,11 @@
       "Bash(git commit -q -m 'Step 1: split into index.html + styles.css + data.js + game.js *)",
       "Bash(git commit -q -m 'Step 2: localStorage save/load + Settings panel *)",
       "Bash(node validate.js)",
-      "Bash(git commit -q -m 'Step 3: economy + Pickup Tailgate Tackle Shop *)"
+      "Bash(git commit -q -m 'Step 3: economy + Pickup Tailgate Tackle Shop *)",
+      "Bash(timeout 90 npm init -y)",
+      "Bash(timeout 90 npm install jsdom --no-audit --no-fund)",
+      "Bash(printf 'node_modules/\\\\n.DS_Store\\\\n*.log\\\\npackage.json\\\\npackage-lock.json\\\\n')",
+      "Bash(git commit -q -m 'Step 4: location ladder, travel map, and per-location theming *)"
     ]
   }
 }

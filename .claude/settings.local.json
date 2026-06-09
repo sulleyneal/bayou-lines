@@ -21,7 +21,10 @@
       "Bash(git commit -q -m 'Step 4: location ladder, travel map, and per-location theming *)",
       "Bash(pkill -f \"JSDOM\\\\|node -e\")",
       "Bash(taskkill //F //IM node.exe)",
-      "Bash(git commit -q -m 'Step 5: real-time day/night cycle *)"
+      "Bash(git commit -q -m 'Step 5: real-time day/night cycle *)",
+      "Bash(node --check audio.js)",
+      "Bash(timeout 30 node -e ' *)",
+      "Bash(git commit -q -m 'Step 6: generative ambient audio + soft one-shot cues *)"
     ]
   }
 }

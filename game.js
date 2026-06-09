@@ -68,6 +68,18 @@
   const scene = $("scene"), water = $("water"), bobber = $("bobber"),
         line = $("line"), msg = $("message"), btn = $("actionBtn");
 
+  /* ---------- AUDIO BRIDGE ---------- */
+  let audioOn = false;
+  function ensureAudio() {
+    if (audioOn || !window.BayouAudio) return;
+    audioOn = true;
+    window.BayouAudio.unlock();
+    window.BayouAudio.setVolume(state.settings.volume);
+    window.BayouAudio.setMuted(state.settings.muted);
+    window.BayouAudio.setLocationMix(!!loc().coastal);
+  }
+  function sfx(name) { if (audioOn && window.BayouAudio && window.BayouAudio[name]) window.BayouAudio[name](); }
+
   /* ---------- LOCATION ACCESS ---------- */
   function loc() { return D.LOCATIONS.find(l => l.id === state.locationId); }
 
@@ -202,6 +214,7 @@
     line.style.transform = "rotate(" + (-ang) + "rad)";
     line.style.display = "block";
     ripple(x, y);
+    sfx("plop");
 
     state.phase = "waiting";
     btn.textContent = "Wait for it…";
@@ -218,6 +231,7 @@
     stopIdleTicker();
     bobber.className = "nibble";
     ripple(bobberPos.x, bobberPos.y);
+    sfx("tick");
     setMsg(pick(D.GENERIC.nibble));
     nibbleTimer = setTimeout(bite, rand(D.CONFIG.nibbleMs[0], D.CONFIG.nibbleMs[1]));
   }
@@ -281,6 +295,8 @@
       state.bucks += bucks;
       const isPB = w > state.stats.pb;
       if (isPB) { state.stats.pb = w; state.stats.pbName = f.name; }
+      sfx("splash");
+      if (isPB || f.legendary) setTimeout(() => sfx("chime"), 260);
       const badge = f.legendary ? "legendary" : "catch";
       const cls = f.legendary ? "legendary" : "";
       addLog({ emoji: f.emoji, name: f.name, meta: w + " lb", pb: isPB, legend: !!f.legendary });
@@ -475,6 +491,7 @@
     state.locationId = id;
     const l = D.LOCATIONS.find(x => x.id === id);
     applyTheme(l);
+    if (window.BayouAudio) window.BayouAudio.setLocationMix(!!l.coastal);
     updateStats();
     save();
     closePanel("travelPanel");
@@ -578,6 +595,10 @@
       setMsg("A little eager there. It was just window shopping.", "wait for the full dunk next time");
     }
   }
+
+  // audio can only start after a user gesture (browser autoplay policy)
+  ["pointerdown", "keydown", "touchstart"].forEach(ev =>
+    document.addEventListener(ev, ensureAudio, { once: true }));
 
   scene.addEventListener("click", e => {
     const wr = water.getBoundingClientRect();

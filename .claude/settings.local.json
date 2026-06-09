@@ -24,7 +24,11 @@
       "Bash(git commit -q -m 'Step 5: real-time day/night cycle *)",
       "Bash(node --check audio.js)",
       "Bash(timeout 30 node -e ' *)",
-      "Bash(git commit -q -m 'Step 6: generative ambient audio + soft one-shot cues *)"
+      "Bash(git commit -q -m 'Step 6: generative ambient audio + soft one-shot cues *)",
+      "Bash(timeout 25 node -e ' *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(timeout 20 node -e ' *)",
+      "Bash(git commit -q -m 'Step 7: achievements \\(The Tackle Box\\) + polish pass *)"
     ]
   }
 }

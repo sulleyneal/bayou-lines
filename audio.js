@@ -12,6 +12,7 @@
   let started = false, muted = false, volume = 0.6, coastal = false;
   let noiseBuf = null;
   const timers = [];
+  let ambientNodes = []; // looping sources/oscillators for the current bed, so we can stop them on a mix change
 
   // ---- a little reusable noise buffer (soft pink-ish) ----
   function makeNoise() {
@@ -60,6 +61,7 @@
     waterLFO.connect(waterLFOg); waterLFOg.connect(waterGain.gain);
     water.connect(waterLP); waterLP.connect(waterGain); waterGain.connect(ambientGain);
     water.start(); waterLFO.start();
+    ambientNodes.push(water, waterLFO);
 
     // 2) insect bed (crickets/cicadas): bandpassed noise with tremolo
     const bugs = ctx.createBufferSource();
@@ -72,6 +74,7 @@
     trem.connect(tremG); tremG.connect(bugGain.gain);
     bugs.connect(bugBP); bugBP.connect(bugGain); bugGain.connect(ambientGain);
     bugs.start(); trem.start();
+    ambientNodes.push(bugs, trem);
     // settle the bug bed to a low baseline
     bugGain.gain.setValueAtTime(0.0, ctx.currentTime);
     bugGain.gain.linearRampToValueAtTime(coastal ? 0.018 : 0.03, ctx.currentTime + 4);
@@ -140,9 +143,10 @@
       if (started && change) { // rebuild the bed for the new soundscape
         timers.forEach(clearTimeout); timers.length = 0;
         started = false;
-        // quick crossfade
+        // quick crossfade, then stop & release the old layers so they don't pile up
         if (ambientGain) ambientGain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.6);
-        setTimeout(startAmbient, 700);
+        const dying = ambientNodes; ambientNodes = [];
+        setTimeout(() => { dying.forEach(n => { try { n.stop(); n.disconnect(); } catch (e) {} }); startAmbient(); }, 700);
       }
     },
     plop() { if (!ctx) return; const o = tone(420, "sine", 0.16, 0.005, 0.18); if (o) { try { o.frequency.exponentialRampToValueAtTime(140, ctx.currentTime + 0.16); } catch (e) {} } noiseBurst(0.05, 0.12, 900); },

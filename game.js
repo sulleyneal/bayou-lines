@@ -17,7 +17,16 @@
     unlocked: ["pond"],
     bucks: 0,
     equip: { rod: 0, line: 0, lure: 0, boat: 0 },
-    stats: { catches: 0, junk: 0, pb: 0, pbName: "", perLoc: {} },
+    stats: {
+      catches: 0, junk: 0, pb: 0, pbName: "", perLoc: {},
+      species: {},      // ref -> count
+      junkKinds: {},    // junk key -> count
+      locSpecies: {},   // locId -> { ref: true }  (for As-Built)
+    },
+    caught: {},         // ref -> true (species + legendaries ever landed)
+    legends: {},        // legendary ref -> true
+    flags: {},          // nightCat, goldenBass, asBuilt, firstSalt
+    achievements: [],   // unlocked ids
     log: [],
     settings: { muted: false, volume: 0.6 },
   };
@@ -25,7 +34,8 @@
   /* ---------- PERSISTENCE ----------
      Everything but the transient `phase` is saved. Loading deep-merges
      onto defaults so old saves survive new fields in future versions. */
-  const SAVE_FIELDS = ["locationId", "unlocked", "bucks", "equip", "stats", "log", "settings"];
+  const SAVE_FIELDS = ["locationId", "unlocked", "bucks", "equip", "stats",
+    "caught", "legends", "flags", "achievements", "log", "settings"];
   let saveLocked = false; // true during reset, so nothing re-saves stale data
 
   function save() {
@@ -126,7 +136,7 @@
     return null;
   }
 
-  function pickJunk() { return D.JUNK[pick(loc().junk)]; }
+  function pickJunk() { const key = pick(loc().junk); return { key, def: D.JUNK[key] }; }
   function junkChance() { return lure().junkChance; }
 
   // Does this fish break off? Gentle by design: only big-for-your-gear fish,
@@ -271,9 +281,10 @@
     ripple(bobberPos.x, bobberPos.y);
 
     if (Math.random() < junkChance()) {
-      const j = pickJunk();
+      const { key, def: j } = pickJunk();
       const pity = Math.round(rand(D.CONFIG.junkPity[0], D.CONFIG.junkPity[1]));
       state.stats.junk++;
+      state.stats.junkKinds[key] = (state.stats.junkKinds[key] || 0) + 1;
       state.bucks += pity;
       addLog({ emoji: j.emoji, name: j.name, meta: "junk" });
       showCard(j.emoji, "junk haul", j.name, "non-aquatic · released back to society",
@@ -290,8 +301,14 @@
         return;
       }
       const bucks = payout(f, w);
+      const key = refKey(f);
       state.stats.catches++;
       state.stats.perLoc[state.locationId] = (state.stats.perLoc[state.locationId] || 0) + 1;
+      state.stats.species[key] = (state.stats.species[key] || 0) + 1;
+      state.caught[key] = true;
+      if (f.legendary) state.legends[key] = true;
+      recordSpeciesHere(key);
+      noteFlags(f, key);
       state.bucks += bucks;
       const isPB = w > state.stats.pb;
       if (isPB) { state.stats.pb = w; state.stats.pbName = f.name; }
@@ -306,6 +323,7 @@
     }
     updateStats();
     save();
+    checkAchievements();
     setMsg("Back to the water whenever you're ready. No rush. Genuinely none.");
   }
 
@@ -325,6 +343,7 @@
     $("locBlurb").textContent = l.blurb;
     if ($("shopPanel").classList.contains("open")) renderShop();
     if ($("travelPanel").classList.contains("open")) renderTravel();
+    if ($("boxPanel").classList.contains("open")) renderBox();
   }
 
   function showCard(emoji, badge, name, detail, value, flavor, cls) {
@@ -483,6 +502,7 @@
     state.unlocked.push(id);
     if (window.BayouAudio) window.BayouAudio.chime();
     travelTo(id, true);
+    checkAchievements();
   }
 
   function travelTo(id, fresh) {
@@ -497,6 +517,90 @@
     closePanel("travelPanel");
     setMsg(fresh ? `Permit secured. Welcome to <b>${l.name}</b>.` : `Now fishing <b>${l.name}</b>.`,
       pick(l.idle));
+  }
+
+  /* ---------- ACHIEVEMENTS ("The Tackle Box") ---------- */
+  const ALL_REFS = new Set(), LEGEND_REFS = new Set();
+  D.LOCATIONS.forEach(l => {
+    l.species.forEach(s => ALL_REFS.add(s.ref));
+    (l.legendaries || []).forEach(s => { ALL_REFS.add(s.ref); LEGEND_REFS.add(s.ref); });
+  });
+  const CATFISH = ["channelcat", "bluecat", "flathead"];
+  const BASSES = ["largemouth", "trophybass", "smallbass"];
+  const SALTIES = ["redfish", "speck", "flounder", "sheepshead", "blackdrum"];
+  const ACH_ICONS = {
+    first_cast: "🎣", revise: "📜", deficient: "🕳️", litter: "🚧", sacaulait: "🐟",
+    patience: "🧘", pb10: "⚖️", pb25: "🏋️", whiskers: "🌙", golden: "🌅",
+    firstboat: "🛶", bassboat: "🚤", fullrod: "📐", travel3: "🗺️", asbuilt: "📋",
+    substantial: "✅", firstlegend: "👑", submittal: "🏆", gator: "🐊", rich: "💵",
+    saltlife: "🌊", fullbox: "🧰",
+  };
+
+  function recordSpeciesHere(key) {
+    const id = state.locationId;
+    const ls = state.stats.locSpecies[id] || (state.stats.locSpecies[id] = {});
+    ls[key] = true;
+    if (loc().species.map(s => s.ref).every(r => ls[r])) state.flags.asBuilt = true;
+  }
+  function noteFlags(f, key) {
+    if (CATFISH.includes(key) && phaseId === "night") state.flags.nightCat = true;
+    if (BASSES.includes(key) && phaseId === "golden") state.flags.goldenBass = true;
+    if (SALTIES.includes(key)) state.flags.firstSalt = true;
+  }
+
+  function facade() {
+    return {
+      stats: state.stats, flags: state.flags, equip: state.equip,
+      caught: state.caught, bucks: state.bucks,
+      totalCatches: () => state.stats.catches,
+      junkCount: k => state.stats.junkKinds[k] || 0,
+      speciesTotal: refs => refs.reduce((s, r) => s + (state.stats.species[r] || 0), 0),
+      unlockedCount: () => state.unlocked.length,
+      legendCount: () => Object.keys(state.legends).length,
+      legendTotal: () => LEGEND_REFS.size,
+      speciesCaughtCount: () => Object.keys(state.caught).length,
+      speciesTotalCount: () => ALL_REFS.size,
+    };
+  }
+
+  function checkAchievements() {
+    const g = facade();
+    const newly = [];
+    for (const a of D.ACHIEVEMENTS) {
+      if (state.achievements.includes(a.id)) continue;
+      let ok = false;
+      try { ok = a.check(g); } catch (e) { ok = false; }
+      if (ok) { state.achievements.push(a.id); newly.push(a); }
+    }
+    if (newly.length) {
+      save();
+      newly.forEach((a, i) => setTimeout(() => { toast(a); sfx("chime"); }, i * 500));
+      if ($("boxPanel").classList.contains("open")) renderBox();
+    }
+  }
+
+  function toast(a) {
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = `<span class="t-icon">${ACH_ICONS[a.id] || "🪝"}</span>
+      <span><span class="t-label">Tackle Box</span>${a.name}</span>`;
+    $("toasts").appendChild(el);
+    setTimeout(() => el.remove(), 5000);
+  }
+
+  function renderBox() {
+    const got = state.achievements;
+    $("achCount").textContent = got.length + "/" + D.ACHIEVEMENTS.length;
+    $("boxBody").innerHTML = D.ACHIEVEMENTS.map(a => {
+      const has = got.includes(a.id);
+      return `<div class="achRow ${has ? "got" : ""}">
+          <span class="ach-icon">${ACH_ICONS[a.id] || "🪝"}</span>
+          <div class="ach-body">
+            <div class="ach-name">${has ? a.name : "• • •"}</div>
+            <div class="ach-desc">${a.desc}</div>
+          </div>
+        </div>`;
+    }).join("");
   }
 
   /* ---------- SHOP ---------- */
@@ -549,6 +653,7 @@
     updateStats();
     renderShop();
     if (window.BayouAudio) window.BayouAudio.chime();
+    checkAchievements();
     setMsg(`New gear: <b>${t.name}</b>.`, "broke in on the next cast");
   }
 
@@ -559,6 +664,7 @@
   $("logBtn").addEventListener("click", () => openPanel("logPanel"));
   $("shopBtn").addEventListener("click", () => { renderShop(); openPanel("shopPanel"); });
   $("travelBtn").addEventListener("click", () => { renderTravel(); openPanel("travelPanel"); });
+  $("boxBtn").addEventListener("click", () => { renderBox(); openPanel("boxPanel"); });
   $("settingsBtn").addEventListener("click", () => openPanel("settingsPanel"));
   document.querySelectorAll(".panelClose").forEach(b =>
     b.addEventListener("click", () => closePanel(b.dataset.close)));

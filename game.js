@@ -32,6 +32,8 @@
     bounties: [],       // active bounty instances from The Landing
     camp: { tier: 0, decor: {} }, // home base + decor
     daily: { date: "", streak: 0, lastDay: "" }, // daily challenge + streak
+    stock: {},          // locId -> { v: 0..1, ts } fish-population health
+    flags2: {},         // misc later flags (run catches, etc.)
     trotline: { set: false, ts: 0 }, // opt-in idle line
     log: [],
     settings: { muted: false, volume: 0.6 },
@@ -41,7 +43,7 @@
      Everything but the transient `phase` is saved. Loading deep-merges
      onto defaults so old saves survive new fields in future versions. */
   const SAVE_FIELDS = ["locationId", "unlocked", "bucks", "equip", "stats",
-    "caught", "records", "legends", "flags", "achievements", "bounties", "camp", "daily", "trotline", "log", "settings"];
+    "caught", "records", "legends", "flags", "flags2", "achievements", "bounties", "camp", "daily", "stock", "trotline", "log", "settings"];
   let saveLocked = false; // true during reset, so nothing re-saves stale data
 
   function save() {
@@ -135,9 +137,10 @@
     const seasonBias = currentSeason().bias || {};
     const weatherBoost = weather ? weather.rarityBoost : 0;
     const condBoost = conditions().rarity;
+    const locId = state.locationId;
     const weighted = table.map(e => {
       const k = refKey(e.def);
-      let w = e.weight * (lr.bias[k] || 1) * (seasonBias[k] || 1);
+      let w = e.weight * (lr.bias[k] || 1) * (seasonBias[k] || 1) * runBoostFor(k, locId);
       w *= 1 + (lr.rarityBoost + weatherBoost + condBoost) * ((maxW - e.weight) / maxW);
       if (e.def.time && e.def.time.includes(ph)) w *= D.CONFIG.timeBiasMult; // bite better now
       return { def: e.def, w };
@@ -273,8 +276,11 @@
       // mostly location color, occasionally a gentle hint about the conditions
       const r = Math.random();
       const c = conditions();
-      if (c.sol.feeding === "major" && r < 0.4) setMsg("The water just woke up — they're feeding hard right now.");
-      else if (r < 0.45) setMsg(pick(loc().idle));
+      const runs = runHere(state.locationId);
+      if (runs.length && r < 0.35) setMsg(runs[0].report);
+      else if (c.sol.feeding === "major" && r < 0.45) setMsg("The water just woke up — they're feeding hard right now.");
+      else if (stockOf(state.locationId) < 0.6 && r < 0.5) setMsg("You've worked this spot hard lately. It'll bite better with a rest — try somewhere else.");
+      else if (r < 0.62) setMsg(pick(loc().idle));
       else if (r < 0.6) setMsg(currentPhase().hint);
       else if (r < 0.74 && weather) setMsg(weather.report);
       else if (r < 0.86) setMsg(currentSeason().report);
@@ -315,7 +321,8 @@
     setMsg("Line's in. Now we do the hard part: nothing.");
     startIdleTicker();
 
-    const wait = rand(D.CONFIG.baseWaitMs[0], D.CONFIG.baseWaitMs[1]) * (weather ? weather.biteSpeed : 1) * conditions().speed;
+    const stockFactor = 1 + (1 - stockOf(state.locationId)) * 0.6; // low stock = slower bites
+    const wait = rand(D.CONFIG.baseWaitMs[0], D.CONFIG.baseWaitMs[1]) * (weather ? weather.biteSpeed : 1) * conditions().speed * stockFactor;
     biteTimer = setTimeout(nibble, wait);
   }
 
@@ -514,6 +521,8 @@
     recordCatch(f, w, key);
     recordSpeciesHere(key);
     noteFlags(f, key);
+    depleteStock(state.locationId);
+    if (runHere(state.locationId).some(r => r.group.includes(key))) state.flags2.runCatch = true;
     if (typeof creditBounties === "function") creditBounties(f, w, key); // wired in Stage E
     creditDaily({ fish: true, legendary: !!f.legendary, w, key });
     state.bucks += bucks;
@@ -795,6 +804,38 @@
     return D.SEASONS.find(s => s.months.includes(m)) || D.SEASONS[0];
   }
 
+  /* ---------- POPULATIONS & PRESSURE ----------
+     Each spot has a stock 0..1 that dips a little each catch and recovers
+     over real time (catch-and-release keeps it healthy). Low stock just
+     fishes slower — a nudge to rotate spots, never a wall. */
+  const STOCK_DEPLETE = 0.012, STOCK_RECOVER_PER_HR = 0.05, STOCK_FLOOR = 0.45;
+  function stockOf(id) {
+    const s = state.stock[id] || (state.stock[id] = { v: 1, ts: Date.now() });
+    const hrs = (Date.now() - s.ts) / 3600000;
+    if (hrs > 0) { s.v = Math.min(1, s.v + hrs * STOCK_RECOVER_PER_HR); s.ts = Date.now(); }
+    return s.v;
+  }
+  function depleteStock(id) {
+    const s = state.stock[id] || (state.stock[id] = { v: 1, ts: Date.now() });
+    stockOf(id); // settle recovery first
+    s.v = Math.max(STOCK_FLOOR, s.v - STOCK_DEPLETE);
+  }
+  function stockLabel(v) {
+    return v > 0.85 ? "fishing fresh" : v > 0.68 ? "fishing well" : v > 0.55 ? "worked a little" : "been pressured lately";
+  }
+
+  /* ---------- RUNS (seasonal migrations) ---------- */
+  function activeRuns(now) {
+    const m = (now || new Date()).getMonth();
+    return D.RUNS.filter(r => r.months.includes(m));
+  }
+  function runHere(id) { return activeRuns().filter(r => r.locs.includes(id)); }
+  function runBoostFor(key, id) {
+    let mult = 1;
+    for (const r of runHere(id)) if (r.group.includes(key)) mult *= 2.3;
+    return mult;
+  }
+
   /* ---------- LIVING CONDITIONS: moon, tide, solunar feeding ---------- */
   const SYNODIC = 29.530588853;
   const MOON_NAMES = ["new moon", "waxing crescent", "first quarter", "waxing gibbous", "full moon", "waning gibbous", "last quarter", "waning crescent"];
@@ -906,6 +947,7 @@
       state.stats.perLoc[state.locationId] = (state.stats.perLoc[state.locationId] || 0) + 1;
       recordCatch(f, w, key);
       recordSpeciesHere(key);
+      depleteStock(state.locationId);
       bucks += Math.max(1, Math.round(payout(f, w) * TROT.payRate));
       if (w > state.stats.pb) { state.stats.pb = w; state.stats.pbName = f.name; pbHit = true; }
       addLog({ emoji: f.emoji, name: f.name, meta: w + " lb · trotline", pb: false });
@@ -992,10 +1034,16 @@
           (g.open ? `<button class="travelBtn" data-unlock="${l.id}">Get the permit &amp; go</button>`
                   : `<button class="travelBtn" disabled>locked for now</button>`);
       }
+      let cond = "";
+      if (unlocked) {
+        const runs = runHere(l.id);
+        cond = `<div class="spot-cond">${stockLabel(stockOf(l.id))}` +
+          (runs.length ? ` · <span class="run-on">🐟 ${runs[0].label} on</span>` : "") + `</div>`;
+      }
       return `<div class="spotCard ${cls}">
           <div class="spot-name">${l.name} ${flag}</div>
           <div class="spot-blurb">${l.blurb}</div>
-          ${body}
+          ${cond}${body}
         </div>`;
     }).join("");
     $("travelBody").querySelectorAll("[data-go]").forEach(b =>
@@ -1328,7 +1376,7 @@
     saltlife: "🌊", guide20: "📖", fullbox: "🧰",
     rainmaker: "🌧️", frontrunner: "🌩️", trotline: "🪝",
     favor: "🤝", landing: "⛪", homestead: "🏕️", trophies: "🏆",
-    daily1: "📅", streak7: "🔥",
+    daily1: "📅", streak7: "🔥", running: "🐟",
   };
 
   function recordSpeciesHere(key) {
@@ -1347,7 +1395,7 @@
 
   function facade() {
     return {
-      stats: state.stats, flags: state.flags, equip: state.equip,
+      stats: state.stats, flags: state.flags, flags2: state.flags2, equip: state.equip,
       caught: state.caught, bucks: state.bucks, camp: state.camp, daily: state.daily,
       trophyCount: () => Object.keys(state.records).filter(k => state.records[k].max > 0).length,
       totalCatches: () => state.stats.catches,

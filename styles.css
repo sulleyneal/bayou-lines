@@ -455,6 +455,8 @@ h1 em{font-style:italic;font-weight:400;color:var(--lantern)}
 .spot-name{font-family:'Fraunces',serif;font-weight:600;font-size:15px;color:var(--cream);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .spot-name .spot-flag{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
 .spot-blurb{font-size:10.5px;color:var(--cream-dim);font-style:italic;margin-top:4px;line-height:1.5}
+.spot-cond{font-size:10px;color:var(--cream-dim);margin-top:6px;letter-spacing:.03em}
+.spot-cond .run-on{color:var(--good)}
 .spot-req{font-size:10.5px;color:var(--dusk-hi);margin-top:8px;line-height:1.6}
 .spot-req .met{color:var(--good)}
 .spot-req .unmet{color:var(--dusk-lo)}

@@ -685,6 +685,7 @@
     { id: "trophies", name: "Wall of Fame", desc: "Mount 12 different fish on the trophy wall.", check: g => g.trophyCount() >= 12 },
     { id: "daily1", name: "Showed Up", desc: "Finish a daily challenge.", check: g => (g.stats.dailiesDone || 0) >= 1 },
     { id: "streak7", name: "Regular Out Here", desc: "Keep a 7-day streak going.", check: g => (g.daily.streak || 0) >= 7 },
+    { id: "running", name: "Right Place, Right Time", desc: "Land a fish during a seasonal run.", check: g => g.flags2 && g.flags2.runCatch },
     { id: "guide20", name: "Field Notes", desc: "Log 20 different species in the Field Guide.", check: g => g.speciesCaughtCount() >= 20 },
     { id: "fullbox", name: "The Whole Tackle Box", desc: "Catch at least one of every species in the game.", check: g => g.speciesCaughtCount() >= g.speciesTotalCount() },
   ];
@@ -796,6 +797,21 @@
     { id: "d_legend",  kind: "legendary", reward: 420, text: "Cross paths with any legendary today" },
   ];
 
+  /* ============================================================
+     RUNS — seasonal migrations/bites. When a run is on (by real-world
+     month) at a location, those species surge there. Tells you where
+     to be and when. months are 0-indexed.
+     ============================================================ */
+  const RUNS = [
+    { id: "bassprespawn", group: ["largemouth", "trophybass"], locs: ["caney", "toledo", "darbonne"], months: [1, 2], label: "the prespawn bass bite", report: "Big females are staging to spawn — the year's best shot at a true giant." },
+    { id: "crappiespawn", group: ["crappie", "blackcrappie"], locs: ["darbonne", "caney", "toledo", "lincoln"], months: [2, 3], label: "the crappie spawn", report: "Crappie are stacked in the shallows to spawn. Back the truck up." },
+    { id: "whitebass", group: ["whitebass", "striper"], locs: ["ouachita", "toledo", "caney"], months: [2, 3], label: "the white bass run", report: "White bass are running up the river in schools, hitting like freight trains." },
+    { id: "catfishsummer", group: ["channelcat", "bluecat", "flathead"], locs: ["ouachita", "atchafalaya", "toledo", "darbonne"], months: [5, 6, 7], label: "the summer catfish bite", report: "Warm nights have the catfish prowling. Stink bait and patience pay off now." },
+    { id: "garsummer", group: ["spottedgar", "longnosegar", "alligatorgar", "bowfin"], locs: ["blackbayou", "atchafalaya"], months: [6, 7], label: "the gar are rolling", report: "Gar are rolling on the surface in the heat. Primal stuff out in the basin." },
+    { id: "redfishfall", group: ["redfish", "blackdrum"], locs: ["venice"], months: [8, 9, 10], label: "the bull red run", report: "Bull reds are schooling in the passes. The marsh is absolutely on fire." },
+    { id: "specwinter", group: ["speck"], locs: ["venice"], months: [11, 0, 1], label: "the speckled trout bite", report: "Cold water has the specks bunched up tight under the diving birds." },
+  ];
+
   window.DATA = { CONFIG, PHASES, GENERIC, S, L, JUNK, EQUIPMENT, LOCATIONS, ACHIEVEMENTS,
-    WEATHER, SEASONS, CHARACTERS, BOUNTY_TEMPLATES, CAMP, DAILY };
+    WEATHER, SEASONS, CHARACTERS, BOUNTY_TEMPLATES, CAMP, DAILY, RUNS };
 })();

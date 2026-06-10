@@ -275,6 +275,26 @@ h1 em{font-style:italic;font-weight:400;color:var(--lantern)}
 }
 .travelBtn:disabled{color:var(--cream-dim);border-color:rgba(232,193,112,.14);cursor:default}
 
+/* ============ FIELD GUIDE ============ */
+.guideSection{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-dim);margin:18px 0 8px}
+.guideSection:first-child{margin-top:4px}
+.gCard{
+  display:flex;gap:12px;align-items:flex-start;
+  padding:11px 12px;border-radius:12px;margin-bottom:8px;
+  border:1px solid rgba(232,193,112,.1);background:rgba(232,193,112,.02);
+}
+.gCard.logged{border-color:rgba(232,193,112,.34);background:rgba(232,193,112,.06)}
+.gCard.legend.logged{border-color:var(--lantern);background:linear-gradient(90deg,rgba(232,193,112,.1),rgba(216,85,63,.07))}
+.g-emoji{font-size:26px;line-height:1;flex-shrink:0;width:30px;text-align:center}
+.gCard:not(.logged) .g-emoji{filter:grayscale(1) brightness(0) opacity(.45)}
+.g-body{flex:1;min-width:0}
+.g-name{font-size:13px;color:var(--cream);font-weight:500}
+.gCard:not(.logged) .g-name{color:var(--cream-dim);letter-spacing:.18em}
+.g-rec{font-size:10.5px;color:var(--accent);margin-top:3px;letter-spacing:.02em}
+.g-where{font-size:10px;color:var(--cream-dim);margin-top:3px;line-height:1.5}
+.g-flavor{font-size:10.5px;color:var(--cream-dim);font-style:italic;margin-top:5px;line-height:1.45}
+.g-crown{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--lantern)}
+
 /* ============ TACKLE BOX (achievements) ============ */
 .achGrid{display:flex;flex-direction:column;gap:8px}
 .achRow{
@@ -338,7 +358,7 @@ input[type=range]{width:130px;accent-color:var(--lantern)}
     background:rgba(8,22,20,.82);backdrop-filter:blur(8px);
     border-top:1px solid var(--ui-border);
   }
-  .toolBtn{flex:1 1 0;min-width:0;text-align:center;padding:10px 4px;font-size:11px;border-radius:12px}
+  .toolBtn{flex:1 1 0;min-width:0;text-align:center;padding:9px 2px;font-size:10.5px;border-radius:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* Cast button floats clearly above the bar */
   #actionBtn{bottom:calc(70px + env(safe-area-inset-bottom,0px));padding:12px 30px}
   #message{bottom:calc(140px + env(safe-area-inset-bottom,0px))}

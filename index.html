@@ -48,6 +48,7 @@
 
 <div id="toolbar">
   <button class="toolBtn" id="travelBtn">Travel</button>
+  <button class="toolBtn" id="guideBtn">Guide</button>
   <button class="toolBtn" id="shopBtn">Shop</button>
   <button class="toolBtn" id="boxBtn">Box</button>
   <button class="toolBtn" id="logBtn">Log</button>
@@ -71,6 +72,13 @@
   <div class="p-sub">field notes · the most recent 60 stay here</div>
   <div id="logEmpty">Nothing yet. The bayou rewards patience, and also people who just sit here doing nothing. Same thing, really.</div>
   <div id="logList"></div>
+</aside>
+
+<aside id="guidePanel" class="panel" aria-label="Field Guide">
+  <button class="panelClose" data-close="guidePanel" aria-label="Close">✕</button>
+  <h2>Field Guide</h2>
+  <div class="p-sub">every fish that swims this water · <span id="guideCount">0 of 0</span> logged</div>
+  <div id="guideBody"></div>
 </aside>
 
 <aside id="boxPanel" class="panel" aria-label="The Tackle Box">

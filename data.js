@@ -676,6 +676,7 @@
     { id: "gator", name: "Mutually Released", desc: "Briefly 'catch' the alligator. Nobody talk about it.", check: g => g.caught["gator"] },
     { id: "rich", name: "Liquid Assets", desc: "Have 5,000 Bayou Bucks in pocket at once.", check: g => g.bucks >= 5000 },
     { id: "saltlife", name: "Brackish Convert", desc: "Land your first saltwater fish in the marsh.", check: g => g.flags.firstSalt },
+    { id: "guide20", name: "Field Notes", desc: "Log 20 different species in the Field Guide.", check: g => g.speciesCaughtCount() >= 20 },
     { id: "fullbox", name: "The Whole Tackle Box", desc: "Catch at least one of every species in the game.", check: g => g.speciesCaughtCount() >= g.speciesTotalCount() },
   ];
 

@@ -349,6 +349,7 @@
     if ($("shopPanel").classList.contains("open")) renderShop();
     if ($("travelPanel").classList.contains("open")) renderTravel();
     if ($("boxPanel").classList.contains("open")) renderBox();
+    if ($("guidePanel").classList.contains("open")) renderGuide();
   }
 
   function showCard(emoji, badge, name, detail, value, flavor, cls) {
@@ -524,6 +525,48 @@
       pick(l.idle));
   }
 
+  /* ---------- FIELD GUIDE ---------- */
+  // where each fish can be found (species + legendary homes), for hints
+  const REF_LOCS = {};
+  D.LOCATIONS.forEach(l => {
+    l.species.forEach(s => (REF_LOCS[s.ref] = REF_LOCS[s.ref] || []).push(l.name));
+    (l.legendaries || []).forEach(s => (REF_LOCS[s.ref] = REF_LOCS[s.ref] || []).push(l.name));
+  });
+  const GUIDE_FISH = Object.keys(D.S).filter(k => REF_LOCS[k]);
+  const GUIDE_LEGENDS = Object.keys(D.L).filter(k => REF_LOCS[k]);
+
+  function guideCard(ref, def, isLegend) {
+    const logged = !!state.caught[ref];
+    const rec = state.records[ref];
+    const where = REF_LOCS[ref] ? REF_LOCS[ref].join(" · ") : "";
+    let recLine = "", flavor = "";
+    if (logged && rec) {
+      recLine = `<div class="g-rec">caught ×${rec.count} · best ${rec.max} lb</div>`;
+      flavor = `<div class="g-flavor">${def.flavor[0]}</div>`;
+    }
+    const whereLabel = isLegend ? "legend of" : "found in";
+    return `<div class="gCard ${logged ? "logged" : ""} ${isLegend ? "legend" : ""}">
+        <span class="g-emoji">${def.emoji}</span>
+        <div class="g-body">
+          <div class="g-name">${logged ? def.name : "• • • • •"} ${isLegend ? '<span class="g-crown">legend</span>' : ""}</div>
+          ${recLine}
+          <div class="g-where">${whereLabel}: ${where}</div>
+          ${flavor}
+        </div>
+      </div>`;
+  }
+
+  function renderGuide() {
+    const total = GUIDE_FISH.length + GUIDE_LEGENDS.length;
+    const logged = GUIDE_FISH.concat(GUIDE_LEGENDS).filter(r => state.caught[r]).length;
+    $("guideCount").textContent = logged + " of " + total;
+    $("guideBody").innerHTML =
+      '<div class="guideSection">The Fish</div>' +
+      GUIDE_FISH.map(r => guideCard(r, D.S[r], false)).join("") +
+      '<div class="guideSection">Local Legends</div>' +
+      GUIDE_LEGENDS.map(r => guideCard(r, D.L[r], true)).join("");
+  }
+
   /* ---------- ACHIEVEMENTS ("The Tackle Box") ---------- */
   const ALL_REFS = new Set(), LEGEND_REFS = new Set();
   D.LOCATIONS.forEach(l => {
@@ -538,7 +581,7 @@
     patience: "🧘", pb10: "⚖️", pb25: "🏋️", whiskers: "🌙", golden: "🌅",
     firstboat: "🛶", bassboat: "🚤", fullrod: "📐", travel3: "🗺️", asbuilt: "📋",
     substantial: "✅", firstlegend: "👑", submittal: "🏆", gator: "🐊", rich: "💵",
-    saltlife: "🌊", fullbox: "🧰",
+    saltlife: "🌊", guide20: "📖", fullbox: "🧰",
   };
 
   function recordSpeciesHere(key) {
@@ -670,6 +713,7 @@
   $("shopBtn").addEventListener("click", () => { renderShop(); openPanel("shopPanel"); });
   $("travelBtn").addEventListener("click", () => { renderTravel(); openPanel("travelPanel"); });
   $("boxBtn").addEventListener("click", () => { renderBox(); openPanel("boxPanel"); });
+  $("guideBtn").addEventListener("click", () => { renderGuide(); openPanel("guidePanel"); });
   $("settingsBtn").addEventListener("click", () => openPanel("settingsPanel"));
   document.querySelectorAll(".panelClose").forEach(b =>
     b.addEventListener("click", () => closePanel(b.dataset.close)));

@@ -58,6 +58,10 @@ body:not(.dark) .firefly{opacity:0 !important;animation:none}
 
 .cypress{position:absolute;bottom:0;fill:var(--cypress);opacity:.96;transition:fill 1.4s linear}
 
+/* per-location scenery silhouettes, anchored to the waterline */
+#sceneryLayer{position:absolute;inset:0;pointer-events:none;z-index:1}
+.scenery-item{position:absolute;width:auto;transition:opacity 1.4s linear}
+
 #water{
   position:absolute;left:0;right:0;bottom:0;height:54%;
   background:linear-gradient(to bottom,#5b4a3f 0%,var(--water-hi) 12%,var(--water-lo) 70%);
@@ -170,9 +174,9 @@ body:not(.dark) .firefly{opacity:0 !important;animation:none}
 
 /* fish cruising under the surface (decorative) */
 .swimmer{position:absolute;left:0;width:40px;opacity:.18;pointer-events:none;animation:swimR linear forwards;will-change:transform}
-.swimmer svg{width:100%;display:block;fill:#0a1a16}
+.swimmer svg{width:100%;display:block;fill:#0a1a16;transform:scaleX(-1)} /* base faces left; flip to face right for the rightward swim */
 .swimmer.l{animation-name:swimL}
-.swimmer.l svg{transform:scaleX(-1)}
+.swimmer.l svg{transform:scaleX(1)} /* leftward swim: face left (unflipped) */
 @keyframes swimR{from{transform:translateX(-12vw)}to{transform:translateX(114vw)}}
 @keyframes swimL{from{transform:translateX(114vw)}to{transform:translateX(-12vw)}}
 

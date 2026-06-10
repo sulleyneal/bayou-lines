@@ -808,12 +808,14 @@
   }
 
   /* ---------- THEMING ---------- */
+  function hazeFromSky(css) { const m = css.match(/#[0-9a-f]{3,6}/gi); return (m && m[2]) || (m && m[1]) || "#7a5a55"; }
   function applyTheme(l) {
     $("sky").style.background = l.palette.sky;
     $("water").style.background = l.palette.water;
     const root = document.documentElement.style;
     root.setProperty("--cypress", l.palette.cypress);
     root.setProperty("--accent", l.accent);
+    if (window.SceneryArt) $("sceneryLayer").innerHTML = window.SceneryArt.svg(l.id, { color: l.palette.cypress, haze: hazeFromSky(l.palette.sky) });
     if (typeof applyDayNight === "function") applyDayNight(); // step 5 re-tints on top
   }
 

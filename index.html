@@ -22,20 +22,13 @@
   <div id="sky"><div id="sun"></div></div>
   <div id="stars"></div>
 
-  <!-- cypress silhouettes -->
-  <svg class="cypress" style="left:-2%;height:62%;width:auto" viewBox="0 0 200 400" preserveAspectRatio="xMinYMax meet" aria-hidden="true">
-    <path d="M95 400 L95 180 Q70 160 60 110 Q90 130 95 100 Q60 80 70 30 Q95 70 100 20 Q105 70 130 30 Q140 80 105 100 Q110 130 140 110 Q130 160 105 180 L105 400 Z"/>
-    <path d="M40 400 L40 260 Q20 245 15 210 Q35 225 40 200 Q15 185 22 150 Q40 180 44 140 Q48 180 66 150 Q73 185 48 200 Q53 225 73 210 Q68 245 48 260 L48 400 Z" opacity=".85"/>
-    <ellipse cx="95" cy="396" rx="120" ry="10" opacity=".5"/>
-  </svg>
-  <svg class="cypress" style="right:-1%;height:48%;width:auto;transform:scaleX(-1)" viewBox="0 0 200 400" preserveAspectRatio="xMinYMax meet" aria-hidden="true">
-    <path d="M95 400 L95 180 Q70 160 60 110 Q90 130 95 100 Q60 80 70 30 Q95 70 100 20 Q105 70 130 30 Q140 80 105 100 Q110 130 140 110 Q130 160 105 180 L105 400 Z" opacity=".9"/>
-  </svg>
-
   <div id="water">
     <div id="caustics" aria-hidden="true"></div>
     <div id="glimmer" aria-hidden="true"></div>
   </div>
+
+  <!-- per-location scenery (trees / timber / marsh / rigs), themed by JS -->
+  <div id="sceneryLayer" aria-hidden="true"></div>
 
   <!-- foreground reeds for depth -->
   <svg class="reed" style="left:2%" viewBox="0 0 120 200" preserveAspectRatio="xMinYMax meet" aria-hidden="true">
@@ -211,6 +204,7 @@
 <script src="data.js"></script>
 <script src="fishart.js"></script>
 <script src="campart.js"></script>
+<script src="sceneryart.js"></script>
 <script src="audio.js"></script>
 <script src="game.js"></script>
 <script>

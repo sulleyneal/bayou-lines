@@ -681,6 +681,8 @@
     { id: "trotline", name: "Set It and Forget It", desc: "Bring in fish on the trotline.", check: g => g.flags.trotline },
     { id: "favor", name: "Good Neighbor", desc: "Finish your first bounty at the landing.", check: g => (g.stats.bountiesDone || 0) >= 1 },
     { id: "landing", name: "Pillar of the Community", desc: "Finish 12 bounties for the regulars.", check: g => (g.stats.bountiesDone || 0) >= 12 },
+    { id: "homestead", name: "Home on the Water", desc: "Build the camp all the way up.", check: g => g.camp.tier >= 4 },
+    { id: "trophies", name: "Wall of Fame", desc: "Mount 12 different fish on the trophy wall.", check: g => g.trophyCount() >= 12 },
     { id: "guide20", name: "Field Notes", desc: "Log 20 different species in the Field Guide.", check: g => g.speciesCaughtCount() >= 20 },
     { id: "fullbox", name: "The Whole Tackle Box", desc: "Catch at least one of every species in the game.", check: g => g.speciesCaughtCount() >= g.speciesTotalCount() },
   ];
@@ -754,6 +756,28 @@
       flavor: "Word is there's a big old one in this water. Bring me a story worth telling and I'll make it worth your while." },
   ];
 
+  /* ============================================================
+     CAMP — a home base you build up, plus decor you hang on it.
+     Cosmetic + a place to mount your trophies. Buy tiers in order.
+     ============================================================ */
+  const CAMP = {
+    tiers: [
+      { name: "A folding chair & a cooler", flavor: "Home base is wherever you set the cooler down.", price: 0 },
+      { name: "A little plank dock", flavor: "Now you can sit with your feet off the water. Luxury.", price: 300 },
+      { name: "A tin-roof lean-to", flavor: "Shade, and a place to hang the rods. Coming up in the world.", price: 900 },
+      { name: "A proper fish camp", flavor: "Bunks, a stove, a screen door that slaps. Heaven, with mosquitoes.", price: 2600 },
+      { name: "The whole compound", flavor: "Dock, cabin, porch, a flag. People ask to visit now.", price: 7000 },
+    ],
+    decor: [
+      { id: "lights", name: "A string of porch lights", price: 150, flavor: "Warm light over dark water. Worth every penny." },
+      { id: "torch", name: "A tiki torch", price: 90, flavor: "Citronella. The mosquitoes are unimpressed, but it's a vibe." },
+      { id: "flag", name: "A flag on a pole", price: 120, flavor: "Pelican State colors, snapping in the river wind." },
+      { id: "smoker", name: "A barrel smoker", price: 300, flavor: "The smell alone raises the property value." },
+      { id: "dog", name: "A camp dog", price: 250, flavor: "Shows up, stays, judges your casting form. Family now." },
+      { id: "chair2", name: "A second good chair", price: 110, flavor: "For company, or for your feet. No judgment here." },
+    ],
+  };
+
   window.DATA = { CONFIG, PHASES, GENERIC, S, L, JUNK, EQUIPMENT, LOCATIONS, ACHIEVEMENTS,
-    WEATHER, SEASONS, CHARACTERS, BOUNTY_TEMPLATES };
+    WEATHER, SEASONS, CHARACTERS, BOUNTY_TEMPLATES, CAMP };
 })();

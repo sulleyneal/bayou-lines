@@ -82,12 +82,16 @@
 
 <div id="toolbar">
   <button class="toolBtn" id="travelBtn">Map</button>
-  <button class="toolBtn" id="guideBtn">Guide</button>
-  <button class="toolBtn" id="jobsBtn">Jobs</button>
   <button class="toolBtn" id="shopBtn">Shop</button>
-  <button class="toolBtn" id="boxBtn">Box</button>
-  <button class="toolBtn" id="logBtn">Log</button>
-  <button class="toolBtn" id="settingsBtn">⚙</button>
+  <button class="toolBtn" id="jobsBtn">Jobs</button>
+  <button class="toolBtn" id="guideBtn">Guide</button>
+  <button class="toolBtn" id="moreBtn">⋯</button>
+</div>
+<div id="moreMenu" role="menu">
+  <button class="moreItem" id="campBtn">🏕️ Camp &amp; Trophies</button>
+  <button class="moreItem" id="boxBtn">🎖️ Tackle Box</button>
+  <button class="moreItem" id="logBtn">📖 Catch Log</button>
+  <button class="moreItem" id="settingsBtn">⚙ Settings</button>
 </div>
 
 <div id="catchCard" role="dialog" aria-modal="false">
@@ -121,6 +125,14 @@
   <div class="p-sub">field notes · the most recent 60 stay here</div>
   <div id="logEmpty">Nothing yet. The bayou rewards patience, and also people who just sit here doing nothing. Same thing, really.</div>
   <div id="logList"></div>
+</aside>
+
+<aside id="campPanel" class="panel" aria-label="Camp and trophies">
+  <button class="panelClose" data-close="campPanel" aria-label="Close">✕</button>
+  <h2>The Camp</h2>
+  <div class="p-sub">your spot on the water · build it up, hang your trophies</div>
+  <div id="campScene"></div>
+  <div id="campBody"></div>
 </aside>
 
 <aside id="jobsPanel" class="panel" aria-label="The Landing">
@@ -198,6 +210,7 @@
 
 <script src="data.js"></script>
 <script src="fishart.js"></script>
+<script src="campart.js"></script>
 <script src="audio.js"></script>
 <script src="game.js"></script>
 <script>

@@ -30,6 +30,7 @@
     flags: {},          // nightCat, goldenBass, asBuilt, firstSalt
     achievements: [],   // unlocked ids
     bounties: [],       // active bounty instances from The Landing
+    camp: { tier: 0, decor: {} }, // home base + decor
     trotline: { set: false, ts: 0 }, // opt-in idle line
     log: [],
     settings: { muted: false, volume: 0.6 },
@@ -39,7 +40,7 @@
      Everything but the transient `phase` is saved. Loading deep-merges
      onto defaults so old saves survive new fields in future versions. */
   const SAVE_FIELDS = ["locationId", "unlocked", "bucks", "equip", "stats",
-    "caught", "records", "legends", "flags", "achievements", "bounties", "trotline", "log", "settings"];
+    "caught", "records", "legends", "flags", "achievements", "bounties", "camp", "trotline", "log", "settings"];
   let saveLocked = false; // true during reset, so nothing re-saves stale data
 
   function save() {
@@ -508,6 +509,7 @@
     if ($("boxPanel").classList.contains("open")) renderBox();
     if ($("guidePanel").classList.contains("open")) renderGuide();
     if ($("jobsPanel").classList.contains("open")) renderBoard();
+    if ($("campPanel").classList.contains("open")) renderCamp();
   }
 
   let lastCatch = null; // for photo mode
@@ -992,6 +994,66 @@
     $("jobsBody").innerHTML = intro + cards;
   }
 
+  /* ---------- THE CAMP + TROPHY WALL ---------- */
+  function renderCamp() {
+    const c = state.camp;
+    if (window.CampArt) $("campScene").innerHTML = window.CampArt.svg(c.tier, c.decor);
+    const tiers = D.CAMP.tiers, cur = tiers[c.tier], next = tiers[c.tier + 1];
+    let html = `<div class="campTierRow"><div class="ct-body">
+        <div class="campName">${cur.name}</div><div class="campFlavor">${cur.flavor}</div></div></div>`;
+    if (next) {
+      const afford = state.bucks >= next.price;
+      html += `<div class="sectionLabel">Improve the camp</div>
+        <div class="tierRow"><div class="tier-body"><div class="tier-name">${next.name}</div>
+          <div class="tier-flavor">${next.flavor}</div></div>
+          <button class="buyBtn" data-camp="tier" ${afford ? "" : "disabled"}>${next.price} ₿</button></div>`;
+    }
+    // decor
+    html += `<div class="sectionLabel">Bits &amp; pieces</div><div class="decorGrid">`;
+    html += D.CAMP.decor.map(d => {
+      const owned = !!c.decor[d.id];
+      const afford = state.bucks >= d.price;
+      return `<div class="decorChip ${owned ? "owned" : ""}"><div class="dc-name">${d.name}</div>
+        <div class="dc-flavor">${d.flavor}</div>
+        ${owned ? '<span class="tag owned">up</span>' : `<button class="buyBtn" data-decor="${d.id}" ${afford ? "" : "disabled"}>${d.price} ₿</button>`}</div>`;
+    }).join("") + `</div>`;
+    // trophy wall
+    html += `<div class="sectionLabel">The Trophy Wall</div>`;
+    const trophies = Object.keys(state.records)
+      .filter(k => state.records[k].max > 0 && (D.S[k] || D.L[k]))
+      .sort((a, b) => state.records[b].max - state.records[a].max);
+    if (!trophies.length) {
+      html += `<div id="trophyEmpty">Nothing mounted yet. Land a few and your biggest of each will hang here.</div>`;
+    } else {
+      html += `<div class="trophyWall">` + trophies.map(k => {
+        const def = D.S[k] || D.L[k], rec = state.records[k];
+        const art = (window.FishArt && window.FishArt.has(k)) ? window.FishArt.svg(k, { w: 64 }) : def.emoji;
+        const where = D.LOCATIONS.find(l => l.id === rec.firstLoc);
+        return `<div class="trophy"><div class="tr-art">${art}</div>
+          <div><div class="tr-name">${def.name}</div>
+          <div class="tr-meta">best ${rec.max} lb · caught ×${rec.count}</div>
+          <div class="tr-where">first landed at ${where ? where.name : "the bayou"}</div></div></div>`;
+      }).join("") + `</div>`;
+    }
+    $("campBody").innerHTML = html;
+    const tb = $("campBody").querySelector('[data-camp="tier"]');
+    if (tb) tb.addEventListener("click", buyCampTier);
+    $("campBody").querySelectorAll("[data-decor]").forEach(b =>
+      b.addEventListener("click", () => buyDecor(b.dataset.decor)));
+  }
+  function buyCampTier() {
+    const next = D.CAMP.tiers[state.camp.tier + 1];
+    if (!next || state.bucks < next.price) return;
+    state.bucks -= next.price; state.camp.tier++;
+    sfx("chime"); save(); updateStats(); renderCamp(); checkAchievements();
+  }
+  function buyDecor(id) {
+    const d = D.CAMP.decor.find(x => x.id === id);
+    if (!d || state.camp.decor[id] || state.bucks < d.price) return;
+    state.bucks -= d.price; state.camp.decor[id] = true;
+    sfx("chime"); save(); updateStats(); renderCamp(); checkAchievements();
+  }
+
   /* ---------- FIELD GUIDE ---------- */
   // where each fish can be found (species + legendary homes), for hints
   const REF_LOCS = {};
@@ -1051,7 +1113,7 @@
     substantial: "✅", firstlegend: "👑", submittal: "🏆", gator: "🐊", rich: "💵",
     saltlife: "🌊", guide20: "📖", fullbox: "🧰",
     rainmaker: "🌧️", frontrunner: "🌩️", trotline: "🪝",
-    favor: "🤝", landing: "⛪",
+    favor: "🤝", landing: "⛪", homestead: "🏕️", trophies: "🏆",
   };
 
   function recordSpeciesHere(key) {
@@ -1071,7 +1133,8 @@
   function facade() {
     return {
       stats: state.stats, flags: state.flags, equip: state.equip,
-      caught: state.caught, bucks: state.bucks,
+      caught: state.caught, bucks: state.bucks, camp: state.camp,
+      trophyCount: () => Object.keys(state.records).filter(k => state.records[k].max > 0).length,
       totalCatches: () => state.stats.catches,
       junkCount: k => state.stats.junkKinds[k] || 0,
       speciesTotal: refs => refs.reduce((s, r) => s + (state.stats.species[r] || 0), 0),
@@ -1187,6 +1250,15 @@
   $("boxBtn").addEventListener("click", () => { renderBox(); openPanel("boxPanel"); });
   $("guideBtn").addEventListener("click", () => { renderGuide(); openPanel("guidePanel"); });
   $("jobsBtn").addEventListener("click", () => { renderBoard(); openPanel("jobsPanel"); });
+  $("campBtn").addEventListener("click", () => { renderCamp(); openPanel("campPanel"); closeMore(); });
+
+  // the "More" overflow menu
+  function closeMore() { $("moreMenu").classList.remove("open"); }
+  $("moreBtn").addEventListener("click", e => { e.stopPropagation(); $("moreMenu").classList.toggle("open"); });
+  document.addEventListener("click", e => {
+    if (!e.target.closest("#moreMenu") && !e.target.closest("#moreBtn")) closeMore();
+  });
+  ["boxBtn", "logBtn", "settingsBtn"].forEach(id => $(id).addEventListener("click", closeMore));
   $("settingsBtn").addEventListener("click", () => openPanel("settingsPanel"));
   document.querySelectorAll(".panelClose").forEach(b =>
     b.addEventListener("click", () => closePanel(b.dataset.close)));

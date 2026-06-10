@@ -2,10 +2,10 @@
    Strategy: navigation = network-first (always get the latest page when
    online, fall back to cache offline). Assets = stale-while-revalidate
    (instant from cache, refreshed in the background for next time). */
-const VERSION = "bayou-v3";
+const VERSION = "bayou-v4";
 const CORE = [
   "./", "./index.html", "./styles.css",
-  "./data.js", "./fishart.js", "./audio.js", "./game.js",
+  "./data.js", "./fishart.js", "./campart.js", "./audio.js", "./game.js",
   "./manifest.webmanifest",
   "./icon-192.png", "./icon-512.png", "./icon-180.png",
 ];

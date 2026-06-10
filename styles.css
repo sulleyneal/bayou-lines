@@ -272,6 +272,44 @@ h1 em{font-style:italic;font-weight:400;color:var(--lantern)}
 .toolBtn:hover{color:var(--lantern);border-color:var(--accent)}
 .toolBtn:focus-visible{outline:2px solid var(--lantern);outline-offset:3px}
 
+/* ============ MORE MENU ============ */
+#moreMenu{
+  position:fixed;right:18px;bottom:88px;z-index:11;display:none;
+  flex-direction:column;gap:2px;padding:6px;
+  background:rgba(8,22,20,.96);border:1px solid var(--ui-border);border-radius:14px;
+  backdrop-filter:blur(10px);box-shadow:0 10px 34px rgba(0,0,0,.5);min-width:180px;
+}
+#moreMenu.open{display:flex}
+.moreItem{
+  font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:left;
+  padding:11px 14px;border-radius:9px;background:transparent;color:var(--cream);
+  border:none;cursor:pointer;
+}
+.moreItem:hover{background:rgba(232,193,112,.12);color:var(--lantern)}
+
+/* ============ CAMP & TROPHIES ============ */
+#campScene{border-radius:14px;overflow:hidden;margin-bottom:18px;border:1px solid var(--ui-border);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+#campScene .campart{display:block;width:100%;height:auto}
+.campTierRow{display:flex;gap:12px;align-items:center;padding:12px;border-radius:12px;margin-bottom:14px;border:1px solid var(--accent);background:rgba(232,193,112,.06)}
+.campTierRow .ct-body{flex:1;min-width:0}
+.campName{font-family:'Fraunces',serif;font-weight:600;font-size:15px;color:var(--lantern)}
+.campFlavor{font-size:10.5px;color:var(--cream-dim);font-style:italic;margin-top:3px;line-height:1.45}
+.decorGrid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.decorChip{flex:1 1 46%;min-width:0;padding:10px 12px;border-radius:11px;border:1px solid rgba(232,193,112,.14);background:rgba(232,193,112,.03)}
+.decorChip.owned{border-color:rgba(127,176,105,.4);background:rgba(127,176,105,.06)}
+.decorChip .dc-name{font-size:12px;color:var(--cream)}
+.decorChip .dc-flavor{font-size:10px;color:var(--cream-dim);font-style:italic;margin:3px 0 7px;line-height:1.4}
+.trophyWall{display:flex;flex-direction:column;gap:8px}
+.trophy{display:flex;gap:12px;align-items:center;padding:9px 12px;border-radius:12px;
+  border:1px solid rgba(232,193,112,.18);background:linear-gradient(180deg,rgba(90,71,51,.22),rgba(232,193,112,.04))}
+.trophy .tr-art{width:64px;flex-shrink:0;display:flex;align-items:center}
+.trophy .tr-art .fishart{width:100%;height:auto}
+.trophy .tr-name{font-size:12.5px;color:var(--cream)}
+.trophy .tr-meta{font-size:10.5px;color:var(--accent);margin-top:2px}
+.trophy .tr-where{font-size:10px;color:var(--cream-dim);margin-top:1px}
+#trophyEmpty{font-size:12px;color:var(--cream-dim);font-style:italic;line-height:1.6}
+.sectionLabel{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-dim);margin:20px 0 10px}
+
 /* ============ CATCH CARD ============ */
 #catchCard{
   position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.92);

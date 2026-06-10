@@ -227,6 +227,31 @@
     msg.innerHTML = main + (sub ? '<span class="sub">' + sub + "</span>" : "");
   }
 
+  /* ---------- JUICE ---------- */
+  function spawnSplash(x, y, n, spread) {
+    if (document.hidden) return;
+    for (let i = 0; i < n; i++) {
+      const d = document.createElement("div"); d.className = "droplet";
+      const sz = 3 + Math.random() * 4;
+      d.style.width = d.style.height = sz + "px";
+      d.style.left = x + "px"; d.style.top = y + "px";
+      d.style.setProperty("--dx", ((Math.random() * 2 - 1) * spread).toFixed(0) + "px");
+      d.style.setProperty("--up", (-(10 + Math.random() * spread)).toFixed(0) + "px");
+      d.style.animationDelay = (Math.random() * 0.05).toFixed(3) + "s";
+      document.body.appendChild(d);
+      setTimeout(() => d.remove(), 780);
+    }
+  }
+  function screenShake() {
+    scene.classList.remove("shaking"); void scene.offsetWidth; // restart
+    scene.classList.add("shaking");
+    setTimeout(() => scene.classList.remove("shaking"), 440);
+  }
+  function hapt(pattern) {
+    if (state.settings.muted) return; // mute silences buzz too
+    if (navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) {} }
+  }
+
   /* ---------- IDLE FLAVOR ---------- */
   function startIdleTicker() {
     stopIdleTicker();
@@ -263,7 +288,9 @@
     line.style.transform = "rotate(" + (-ang) + "rad)";
     line.style.display = "block";
     ripple(x, y);
+    spawnSplash(x, y, 6, 16);
     sfx("plop");
+    hapt(8);
 
     state.phase = "waiting";
     btn.textContent = "Wait for it…";
@@ -371,6 +398,8 @@
     bobber.className = "bite";
     btn.textContent = "REEL!"; btn.classList.add("urgent");
     setMsg("<b>On!</b> Hold to reel — ease off when it runs.");
+    spawnSplash(bobberPos.x, bobberPos.y, 8, 22);
+    hapt(18);
     showFightBar(f);
     fight.surgeT = setTimeout(triggerSurge, rand(1100, 2000));
     fight.tick = setInterval(fightLoop, 110);
@@ -399,11 +428,14 @@
     fight.surge = true;
     setFightLabel("let it run…");
     $("fightBar").classList.add("surge");
+    line.classList.add("taut");
     sfx("splash");
+    hapt(22);
     setTimeout(() => {
       if (!fight) return;
       fight.surge = false;
       $("fightBar").classList.remove("surge");
+      line.classList.remove("taut");
       setFightLabel("reel!");
       fight.surgeT = setTimeout(triggerSurge, rand(1500, 2700));
     }, rand(450, 700));
@@ -411,6 +443,7 @@
 
   function endFight() {
     reeling = false;
+    line.classList.remove("taut");
     if (!fight) return;
     clearInterval(fight.tick);
     clearTimeout(fight.surgeT);
@@ -423,6 +456,7 @@
     endFight();
     state.phase = "idle"; resetTackle();
     ripple(bobberPos.x, bobberPos.y);
+    spawnSplash(bobberPos.x, bobberPos.y, 16, 34); // the fish breaks the surface
 
     const bucks = payout(f, w);
     const key = refKey(f);
@@ -436,7 +470,8 @@
     const isPB = w > state.stats.pb;
     if (isPB) { state.stats.pb = w; state.stats.pbName = f.name; }
     sfx("splash");
-    if (isPB || f.legendary) setTimeout(() => sfx("chime"), 260);
+    if (isPB || f.legendary) { setTimeout(() => sfx("chime"), 260); screenShake(); hapt([0, 30, 50, 30]); }
+    else hapt(28);
     const badge = f.legendary ? "legendary" : "catch";
     const cls = f.legendary ? "legendary" : "";
     addLog({ emoji: f.emoji, name: f.name, meta: w + " lb", pb: isPB, legend: !!f.legendary });

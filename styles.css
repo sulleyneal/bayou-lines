@@ -153,6 +153,21 @@ body:not(.dark) .firefly{opacity:0 !important;animation:none}
 }
 @keyframes ripple{from{width:10px;height:10px;opacity:.8;margin:-5px}to{width:90px;height:90px;opacity:0;margin:-45px}}
 
+/* splash droplets */
+.droplet{position:absolute;border-radius:50%;background:rgba(238,236,220,.9);
+  box-shadow:0 0 4px rgba(238,236,220,.5);pointer-events:none;animation:splash .72s ease-out forwards;z-index:6}
+@keyframes splash{
+  0%{transform:translate(0,0) scale(1);opacity:1}
+  45%{transform:translate(calc(var(--dx)*.6),var(--up)) scale(.9);opacity:1}
+  100%{transform:translate(var(--dx),14px) scale(.3);opacity:0}
+}
+/* a quick screen-shake for big landings */
+#scene.shaking{animation:shake .42s ease-in-out}
+@keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-3px,2px)}40%{transform:translate(3px,-2px)}60%{transform:translate(-2px,-1px)}80%{transform:translate(2px,1px)}}
+/* line tension quiver during a surge */
+#line.taut{animation:taut .12s linear infinite}
+@keyframes taut{0%,100%{filter:none}50%{filter:brightness(1.6)}}
+
 /* fish cruising under the surface (decorative) */
 .swimmer{position:absolute;left:0;width:40px;opacity:.18;pointer-events:none;animation:swimR linear forwards;will-change:transform}
 .swimmer svg{width:100%;display:block;fill:#0a1a16}

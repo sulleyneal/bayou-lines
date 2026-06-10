@@ -392,34 +392,60 @@
     setMsg("Heavier line lives at the tackle shop, when you're ready. No rush.");
   }
 
-  // fight "length" in arbitrary units — even little fish give a beat,
-  // big ones are a real haul, gently capped so nothing drags.
+  // each fish fights with its own character (set of timings + feel), plus
+  // per-catch randomness so the same species never plays out identically.
+  const PANFISH_K = ["bluegill", "redear", "bream", "crappie", "blackcrappie"];
+  const GAR_K = ["spottedgar", "longnosegar", "alligatorgar", "bowfin", "cypressking", "grandfather", "gator"];
+  const BASS_K = ["smallbass", "largemouth", "trophybass", "whitebass", "striper", "bartholomew", "cane", "bigtex"];
+
+  function fightStyle(key, f, w) {
+    if (PANFISH_K.includes(key)) return "panfish";
+    if (CATFISH.includes(key)) return "catfish";
+    if (GAR_K.includes(key)) return "gar";
+    if (BASS_K.includes(key)) return "bass";
+    if (f.legendary || f.cls === "trophy" || w >= 12) return "trophy";
+    return "mixed";
+  }
+
+  // base unit length; bigger fish are a longer haul, gently capped
   function fightTarget(w) { return Math.min(0.9 + w * 0.05, 3.0); }
+
+  const FIGHT_PROFILES = {
+    //          tgt  passive reel  tap   first[min,max]  dur[min,max]  gap[min,max]   double labels
+    panfish:  { tm: 0.7, pas: 0.040, reel: 0.060, tap: 0.10, first: [1400, 2400], dur: [260, 420], gap: [2400, 4200], dbl: 0.0, labels: ["light little run…", "easy now…"] },
+    bass:     { tm: 1.0, pas: 0.026, reel: 0.058, tap: 0.10, first: [600, 1300], dur: [380, 620], gap: [800, 1700], dbl: 0.28, labels: ["it jumped!", "there it goes!", "run!"] },
+    catfish:  { tm: 1.2, pas: 0.018, reel: 0.044, tap: 0.07, first: [1400, 2400], dur: [800, 1350], gap: [2000, 3400], dbl: 0.05, labels: ["dead weight…", "it's bulldogging…", "heavy down there…"] },
+    gar:      { tm: 1.05, pas: 0.024, reel: 0.052, tap: 0.10, first: [700, 2200], dur: [300, 900], gap: [700, 3000], dbl: 0.35, labels: ["it's thrashing!", "rolling!", "hold on!"] },
+    trophy:   { tm: 1.15, pas: 0.022, reel: 0.050, tap: 0.08, first: [800, 1500], dur: [550, 950], gap: [1100, 2200], dbl: 0.3, labels: ["big run!", "it's taking line!", "hold steady!"] },
+    mixed:    { tm: 1.0, pas: 0.026, reel: 0.055, tap: 0.09, first: [1100, 2000], dur: [450, 700], gap: [1500, 2700], dbl: 0.15, labels: ["let it run…", "easy…"] },
+  };
 
   function startFight(f, w) {
     state.phase = "fighting";
-    fight = { f, w, prog: 0, target: fightTarget(w), surge: false };
+    const p = FIGHT_PROFILES[fightStyle(refKey(f), f, w)] || FIGHT_PROFILES.mixed;
+    const target = fightTarget(w) * p.tm * (0.85 + Math.random() * 0.3); // per-catch variation
+    fight = { f, w, prog: 0, target, surge: false, p };
     bobber.className = "bite";
     btn.textContent = "REEL!"; btn.classList.add("urgent");
     setMsg("<b>On!</b> Hold to reel — ease off when it runs.");
     spawnSplash(bobberPos.x, bobberPos.y, 8, 22);
     hapt(18);
     showFightBar(f);
-    fight.surgeT = setTimeout(triggerSurge, rand(1100, 2000));
+    fight.surgeT = setTimeout(triggerSurge, rand(p.first[0], p.first[1]));
     fight.tick = setInterval(fightLoop, 110);
   }
 
   function fightLoop() {
     if (!fight) return;
     // passive reel-in (just watching still lands it); holding reels much faster
-    if (!fight.surge) fight.prog += 0.026 + (reeling ? 0.055 : 0);
+    if (!fight.surge) fight.prog += fight.p.pas + (reeling ? fight.p.reel : 0);
     updateFightBar();
     if (fight.prog >= fight.target) landFish();
   }
 
   function fightTap() {
     if (!fight || fight.surge) return; // during a surge, you let it run
-    fight.prog += fight.target * 0.09; // a press gives an immediate crank
+    fight.prog += fight.target * fight.p.tap; // a press gives an immediate crank
     bobber.classList.add("nibble");
     setTimeout(() => bobber && bobber.classList.remove("nibble"), 90);
     sfx("tick");
@@ -429,8 +455,9 @@
 
   function triggerSurge() {
     if (!fight) return;
+    const p = fight.p;
     fight.surge = true;
-    setFightLabel("let it run…");
+    setFightLabel(pick(p.labels));
     $("fightBar").classList.add("surge");
     line.classList.add("taut");
     sfx("splash");
@@ -441,8 +468,10 @@
       $("fightBar").classList.remove("surge");
       line.classList.remove("taut");
       setFightLabel("reel!");
-      fight.surgeT = setTimeout(triggerSurge, rand(1500, 2700));
-    }, rand(450, 700));
+      // sometimes a quick second surge (a double-run); otherwise wait out the gap
+      const again = Math.random() < p.dbl ? rand(220, 520) : rand(p.gap[0], p.gap[1]);
+      fight.surgeT = setTimeout(triggerSurge, again);
+    }, rand(p.dur[0], p.dur[1]));
   }
 
   function endFight() {

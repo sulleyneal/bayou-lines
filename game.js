@@ -178,6 +178,15 @@
       f.style.animationDuration = (10 + Math.random() * 10) + "s, " + (2.6 + Math.random() * 2) + "s";
       scene.appendChild(f);
     }
+    for (let i = 0; i < 4; i++) {
+      const p = document.createElement("div"); p.className = "lilypad";
+      const sz = 16 + Math.random() * 22;
+      p.style.width = sz + "px"; p.style.height = (sz * 0.62) + "px";
+      p.style.left = (8 + Math.random() * 78) + "%";
+      p.style.top = (40 + Math.random() * 48) + "%";
+      p.style.transform = "rotate(" + (Math.random() * 60 - 30) + "deg)";
+      water.appendChild(p);
+    }
     const starWrap = $("stars");
     for (let i = 0; i < 60; i++) {
       const s = document.createElement("div"); s.className = "star";

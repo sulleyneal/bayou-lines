@@ -462,12 +462,14 @@
     const key = refKey(f);
     state.stats.catches++;
     state.stats.perLoc[state.locationId] = (state.stats.perLoc[state.locationId] || 0) + 1;
+    const isPBnow = w > state.stats.pb;
+    lastCatch = { ref: key, name: f.name, w, locId: state.locationId, locName: loc().name, legendary: !!f.legendary, pb: isPBnow };
     recordCatch(f, w, key);
     recordSpeciesHere(key);
     noteFlags(f, key);
     if (typeof creditBounties === "function") creditBounties(f, w, key); // wired in Stage E
     state.bucks += bucks;
-    const isPB = w > state.stats.pb;
+    const isPB = isPBnow;
     if (isPB) { state.stats.pb = w; state.stats.pbName = f.name; }
     sfx("splash");
     if (isPB || f.legendary) { setTimeout(() => sfx("chime"), 260); screenShake(); hapt([0, 30, 50, 30]); }
@@ -508,10 +510,14 @@
     if ($("jobsPanel").classList.contains("open")) renderBoard();
   }
 
+  let lastCatch = null; // for photo mode
+
   function showCard(emoji, badge, name, detail, value, flavor, cls, ref) {
     const em = $("catchEmoji");
     if (ref && window.FishArt && window.FishArt.has(ref)) em.innerHTML = window.FishArt.svg(ref, { w: 168 });
     else em.textContent = emoji;
+    // photo button only for real fish
+    $("catchPhoto").style.display = (ref && window.FishArt && window.FishArt.has(ref)) ? "" : "none";
     const b = $("catchBadge"); b.textContent = badge; b.className = "badge " + (cls || "");
     $("catchName").textContent = name;
     $("catchDetail").textContent = detail;
@@ -520,6 +526,103 @@
     $("catchCard").classList.add("show");
   }
   $("catchClose").addEventListener("click", () => $("catchCard").classList.remove("show"));
+
+  /* ---------- PHOTO MODE ---------- */
+  const PHOTO_W = 1080, PHOTO_H = 1350;
+  function parseStops(css) {
+    const re = /(#[0-9a-f]{3,6})\s+([\d.]+)%/gi; const out = []; let m;
+    while ((m = re.exec(css))) out.push({ c: m[1], o: m[2] });
+    return out;
+  }
+  function stopsSVG(css) { return parseStops(css).map(s => `<stop offset="${s.o}%" stop-color="${s.c}"/>`).join(""); }
+  function fishInner(ref) { return window.FishArt.svg(ref).replace(/^<svg[^>]*>/, "").replace(/<\/svg>$/, ""); }
+
+  function buildPhotoSVG(d) {
+    const l = D.LOCATIONS.find(x => x.id === d.locId) || loc();
+    const skyH = 815;
+    const dateStr = new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    const ribbon = d.legendary ? "LEGENDARY" : (d.pb ? "PERSONAL BEST" : "");
+    const ribbonEl = ribbon ? `<g transform="translate(${PHOTO_W - 60},96) rotate(8)">
+        <rect x="-220" y="-26" width="240" height="52" rx="26" fill="rgba(232,193,112,0.92)"/>
+        <text x="-100" y="8" text-anchor="middle" font-family="Georgia,serif" font-weight="bold" font-size="26" fill="#13302b" letter-spacing="3">${ribbon}</text></g>` : "";
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${PHOTO_W}" height="${PHOTO_H}" viewBox="0 0 ${PHOTO_W} ${PHOTO_H}">
+      <defs>
+        <linearGradient id="psky" x1="0" y1="0" x2="0" y2="1">${stopsSVG(l.palette.sky)}</linearGradient>
+        <linearGradient id="pwater" x1="0" y1="0" x2="0" y2="1">${stopsSVG(l.palette.water)}</linearGradient>
+        <radialGradient id="psun"><stop offset="0" stop-color="#ffe7b0"/><stop offset="0.6" stop-color="#f2a65a"/><stop offset="0.75" stop-color="rgba(242,166,90,0)"/></radialGradient>
+      </defs>
+      <rect width="${PHOTO_W}" height="${skyH}" fill="url(#psky)"/>
+      <circle cx="760" cy="300" r="96" fill="url(#psun)"/>
+      <rect y="${skyH}" width="${PHOTO_W}" height="${PHOTO_H - skyH}" fill="url(#pwater)"/>
+      <!-- cypress -->
+      <g fill="${l.palette.cypress}" transform="translate(40,${skyH}) scale(1.5) translate(0,-300)">
+        <path d="M95 300 L95 150 Q70 130 60 90 Q90 110 95 80 Q60 60 70 20 Q95 55 100 15 Q105 55 130 20 Q140 60 105 80 Q110 110 140 90 Q130 130 105 150 L105 300 Z"/>
+      </g>
+      <!-- fish -->
+      <svg x="200" y="430" width="680" height="366" viewBox="0 0 130 70">${fishInner(d.ref)}</svg>
+      <!-- ripples under fish -->
+      <ellipse cx="540" cy="880" rx="200" ry="22" fill="none" stroke="rgba(242,232,213,.3)" stroke-width="3"/>
+      <ellipse cx="540" cy="880" rx="300" ry="34" fill="none" stroke="rgba(242,232,213,.16)" stroke-width="2"/>
+      <!-- text -->
+      <text x="540" y="1040" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-weight="bold" font-size="62" fill="#f2e8d5">${esc(d.name)}</text>
+      <text x="540" y="1098" text-anchor="middle" font-family="monospace" font-size="34" fill="#e8c170">${d.w} lb · ${esc(d.locName)}</text>
+      <text x="540" y="1146" text-anchor="middle" font-family="monospace" font-size="24" fill="rgba(242,232,213,.6)">catch &amp; release · ${dateStr}</text>
+      <!-- wordmark -->
+      <g transform="translate(60,${PHOTO_H - 56})">
+        <circle cx="14" cy="-6" r="13" fill="#d8553f"/><path d="M 1 -6 a 13 13 0 0 1 26 0 z" fill="#d8553f"/><rect x="1" y="-6" width="26" height="7" fill="#f2e8d5"/>
+        <text x="40" y="2" font-family="Georgia,serif" font-style="italic" font-size="34" fill="#f2e8d5">Bayou <tspan fill="#e8c170">Lines</tspan></text>
+      </g>
+      ${ribbonEl}
+      <rect x="14" y="14" width="${PHOTO_W - 28}" height="${PHOTO_H - 28}" rx="28" fill="none" stroke="rgba(232,193,112,.4)" stroke-width="3"/>
+    </svg>`;
+  }
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  function svgToBlob(svg) {
+    return new Promise((res, rej) => {
+      const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement("canvas"); c.width = PHOTO_W; c.height = PHOTO_H;
+        c.getContext("2d").drawImage(img, 0, 0, PHOTO_W, PHOTO_H);
+        URL.revokeObjectURL(url);
+        c.toBlob(b => res({ blob: b, url: c.toDataURL("image/png") }), "image/png");
+      };
+      img.onerror = rej; img.src = url;
+    });
+  }
+
+  let photoBlob = null;
+  async function openPhoto() {
+    if (!lastCatch) return;
+    setMsg("Developing the shot…");
+    try {
+      const { blob, url } = await svgToBlob(buildPhotoSVG(lastCatch));
+      photoBlob = blob;
+      $("photoImg").src = url;
+      $("photoShare").style.display = (navigator.canShare) ? "" : "none";
+      $("photoModal").classList.add("show");
+    } catch (e) { setMsg("Couldn't develop that one. The light, probably."); }
+  }
+  async function sharePhoto() {
+    if (!photoBlob) return;
+    const file = new File([photoBlob], "bayou-catch.png", { type: "image/png" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], text: `${lastCatch.name}, ${lastCatch.w} lb — Bayou Lines` }); return; } catch (e) {}
+    }
+    savePhoto();
+  }
+  function savePhoto() {
+    if (!photoBlob) return;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(photoBlob);
+    a.download = "bayou-catch.png"; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  $("catchPhoto").addEventListener("click", openPhoto);
+  $("photoShare").addEventListener("click", sharePhoto);
+  $("photoSave").addEventListener("click", savePhoto);
+  $("photoClose").addEventListener("click", () => $("photoModal").classList.remove("show"));
 
   function addLog(e) {
     state.log.unshift(e);

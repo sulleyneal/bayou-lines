@@ -10,9 +10,18 @@ landing. There are no timers that punish and no way to lose. It's a porch.
 
 ## What's in it
 
+- **Hand-drawn fish** — every species and legendary is illustrated
+  procedurally (`fishart.js`): gradient-shaded bodies, fins, patterns,
+  barbels, snouts, tail spots, gold-rimmed legendaries.
 - **The cast & the fight** — tap to cast, set the hook on the bite, then
-  reel it in. Tap to bring it faster or just watch — it lands either way.
-  "Let it run" surges add rhythm, never a loss.
+  hold to reel — or just watch, it lands either way. "Let it run" surges,
+  splash particles, screen-shake on a trophy, and haptics. Never a loss.
+- **Photo mode** — turn any catch into a shareable card (the fish over
+  the location scenery) via the native share sheet.
+- **The Camp** — a home base you build from a folding chair to a full
+  compound, decorate, and hang your trophy wall on.
+- **Daily challenges** — a seeded challenge each day, a login streak, and
+  a featured "hot bite" location that pays extra.
 - **Nine locations** from the Neighborhood Pond to Grand Isle / Venice,
   each with its own water, fish, junk, palette, and idle flavor.
 - **Economy & tackle shop** — four upgrade tracks (rod, line, lure, boat)
@@ -42,8 +51,10 @@ Progress saves to the browser automatically.
 |------|--------------|
 | `index.html` | structure + overlay panels + PWA tags |
 | `styles.css` | the dusk look — Fraunces + IBM Plex Mono |
-| `data.js` | **all content**: locations, species, junk, equipment, achievements, weather, seasons, characters, bounties, tuning |
-| `game.js` | the loop, economy, travel, day/night, weather, fight, guide, bounties, achievements |
+| `data.js` | **all content**: locations, species, junk, equipment, achievements, weather, seasons, characters, bounties, camp, dailies, tuning |
+| `game.js` | the loop, economy, travel, day/night, weather, fight, guide, bounties, camp, dailies, photo mode, achievements |
+| `fishart.js` | procedural SVG fish illustrator |
+| `campart.js` | procedural SVG camp scene |
 | `audio.js` | generative ambient + cues (Web Audio, no dependency) |
 | `sw.js` / `manifest.webmanifest` | offline + installable |
 | `validate.js` | dev tool: `node validate.js` checks `data.js` for dangling refs |

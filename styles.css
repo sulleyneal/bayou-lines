@@ -328,9 +328,20 @@ input[type=range]{width:130px;accent-color:var(--lantern)}
   *,*::before,*::after{animation-duration:.001s !important;animation-iteration-count:1 !important;transition-duration:.001s !important}
 }
 @media (max-width:640px){
-  #hud{flex-direction:column;gap:10px}
+  #hud{flex-direction:column;gap:8px}
   #stats{text-align:left}
-  #message{bottom:150px}
-  #toolbar{flex-wrap:wrap;justify-content:flex-end;max-width:60vw}
-  #actionBtn{bottom:96px}
+  /* toolbar becomes a single full-width bottom bar — no wrapping, no collision */
+  #toolbar{
+    left:0;right:0;bottom:0;max-width:none;
+    flex-wrap:nowrap;justify-content:space-around;gap:4px;
+    padding:8px 6px calc(8px + env(safe-area-inset-bottom,0px));
+    background:rgba(8,22,20,.82);backdrop-filter:blur(8px);
+    border-top:1px solid var(--ui-border);
+  }
+  .toolBtn{flex:1 1 0;min-width:0;text-align:center;padding:10px 4px;font-size:11px;border-radius:12px}
+  /* Cast button floats clearly above the bar */
+  #actionBtn{bottom:calc(70px + env(safe-area-inset-bottom,0px));padding:12px 30px}
+  #message{bottom:calc(140px + env(safe-area-inset-bottom,0px))}
+  /* panels leave room for the bar so their close button isn't hidden */
+  .panel{padding-bottom:84px}
 }

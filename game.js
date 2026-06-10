@@ -586,9 +586,15 @@
 
   function svgToBlob(svg) {
     return new Promise((res, rej) => {
-      // data-URI source (not blob:) keeps the canvas untainted on iOS Safari
-      const src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+      // base64 data-URI (not blob:, not %-encoding) is the most reliable way
+      // to get an SVG into a canvas on iOS Safari without tainting or hanging.
+      let src;
+      try { src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg))); }
+      catch (e) { rej(e); return; }
       const img = new Image();
+      let done = false;
+      const finish = (fn, arg) => { if (done) return; done = true; clearTimeout(timer); fn(arg); };
+      const timer = setTimeout(() => finish(rej, new Error("timeout")), 6000); // never hang
       img.onload = () => {
         try {
           const c = document.createElement("canvas"); c.width = PHOTO_W; c.height = PHOTO_H;
@@ -596,10 +602,10 @@
           ctx.fillStyle = "#0e2826"; ctx.fillRect(0, 0, PHOTO_W, PHOTO_H);
           ctx.drawImage(img, 0, 0, PHOTO_W, PHOTO_H);
           const url = c.toDataURL("image/png");
-          c.toBlob(b => res({ blob: b || dataURLtoBlob(url), url }), "image/png");
-        } catch (e) { rej(e); }
+          c.toBlob(b => finish(res, { blob: b || dataURLtoBlob(url), url }), "image/png");
+        } catch (e) { finish(rej, e); }
       };
-      img.onerror = () => rej(new Error("image load failed"));
+      img.onerror = () => finish(rej, new Error("image load failed"));
       img.src = src;
     });
   }

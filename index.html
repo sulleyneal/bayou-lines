@@ -222,7 +222,12 @@
       if (reloaded) return; reloaded = true; window.location.reload();
     });
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").then(reg => { try { reg.update(); } catch (e) {} }).catch(() => {});
+      navigator.serviceWorker.register("sw.js").then(reg => {
+        const tryUpdate = () => { try { reg.update(); } catch (e) {} };
+        tryUpdate();
+        // also check when the app is brought back to the foreground (helps standalone PWAs)
+        document.addEventListener("visibilitychange", () => { if (!document.hidden) tryUpdate(); });
+      }).catch(() => {});
     });
   }
 </script>

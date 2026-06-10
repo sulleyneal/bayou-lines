@@ -134,10 +134,11 @@
     const ph = phaseId;
     const seasonBias = currentSeason().bias || {};
     const weatherBoost = weather ? weather.rarityBoost : 0;
+    const condBoost = conditions().rarity;
     const weighted = table.map(e => {
       const k = refKey(e.def);
       let w = e.weight * (lr.bias[k] || 1) * (seasonBias[k] || 1);
-      w *= 1 + (lr.rarityBoost + weatherBoost) * ((maxW - e.weight) / maxW);
+      w *= 1 + (lr.rarityBoost + weatherBoost + condBoost) * ((maxW - e.weight) / maxW);
       if (e.def.time && e.def.time.includes(ph)) w *= D.CONFIG.timeBiasMult; // bite better now
       return { def: e.def, w };
     });
@@ -271,10 +272,14 @@
       if (state.phase !== "waiting") return;
       // mostly location color, occasionally a gentle hint about the conditions
       const r = Math.random();
-      if (r < 0.5) setMsg(pick(loc().idle));
-      else if (r < 0.68) setMsg(currentPhase().hint);
-      else if (r < 0.85 && weather) setMsg(weather.report);
-      else setMsg(currentSeason().report);
+      const c = conditions();
+      if (c.sol.feeding === "major" && r < 0.4) setMsg("The water just woke up — they're feeding hard right now.");
+      else if (r < 0.45) setMsg(pick(loc().idle));
+      else if (r < 0.6) setMsg(currentPhase().hint);
+      else if (r < 0.74 && weather) setMsg(weather.report);
+      else if (r < 0.86) setMsg(currentSeason().report);
+      else if (c.tide) setMsg("Tide's " + c.tide.state + ". The marsh fishes best on moving water.");
+      else setMsg("Moon's " + c.moon.name + " tonight. The fish keep their own calendar.");
     }, 7000);
   }
   function stopIdleTicker() { if (idleTicker) { clearInterval(idleTicker); idleTicker = null; } }
@@ -310,7 +315,7 @@
     setMsg("Line's in. Now we do the hard part: nothing.");
     startIdleTicker();
 
-    const wait = rand(D.CONFIG.baseWaitMs[0], D.CONFIG.baseWaitMs[1]) * (weather ? weather.biteSpeed : 1);
+    const wait = rand(D.CONFIG.baseWaitMs[0], D.CONFIG.baseWaitMs[1]) * (weather ? weather.biteSpeed : 1) * conditions().speed;
     biteTimer = setTimeout(nibble, wait);
   }
 
@@ -743,6 +748,8 @@
     const L = lightAt(f);
     $("scene").style.filter = `brightness(${L.b.toFixed(3)}) saturate(${L.s.toFixed(3)}) hue-rotate(${L.h.toFixed(1)}deg) ${currentSeason().tint}`;
     $("stars").style.opacity = Math.max(0, (L.dark - 0.45) / 0.55).toFixed(2);
+    $("moon").style.opacity = Math.max(0, (L.dark - 0.3) / 0.7).toFixed(2);
+    updateCondLine();
     // sun rides high at midday, sinks and fades into the night
     const sunUp = Math.max(0, 1 - L.dark * 1.3);
     $("sun").style.opacity = sunUp.toFixed(2);
@@ -755,15 +762,81 @@
     $("timeChip").title = ph.hint;
   }
 
+  function moonSVG(m) {
+    const r = 20, cx = 22, cy = 22, dark = "#2a3142";
+    const off = (m.waxing ? -1 : 1) * m.illum * 2 * r; // full -> shadow tangent (lit); new -> centered (dark)
+    return `<svg viewBox="0 0 44 44"><defs><clipPath id="mclip"><circle cx="${cx}" cy="${cy}" r="${r}"/></clipPath></defs>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="#e6e4cf"/>
+      <circle cx="${cx - 5}" cy="${cy - 4}" r="3.2" fill="#cfcdb6" opacity="0.5"/><circle cx="${cx + 6}" cy="${cy + 5}" r="2.4" fill="#cfcdb6" opacity="0.4"/><circle cx="${cx + 2}" cy="${cy - 7}" r="1.8" fill="#cfcdb6" opacity="0.4"/>
+      <circle cx="${(cx + off).toFixed(1)}" cy="${cy}" r="${r + 0.5}" fill="${dark}" clip-path="url(#mclip)" opacity="0.94"/></svg>`;
+  }
+  function renderMoon() { $("moon").innerHTML = moonSVG(moonInfo(new Date())); }
+
+  function updateCondLine() {
+    const el = $("condLine"); if (!el) return;
+    const c = conditions();
+    let s = "🌙 " + c.moon.name;
+    if (c.tide) s += " · " + c.tide.state;
+    if (c.sol.feeding) s += c.sol.feeding === "major" ? " · feeding 🎣" : " · biting 🎣";
+    el.textContent = s;
+    el.classList.toggle("feeding", !!c.sol.feeding);
+  }
+
   function startDayNight() {
+    renderMoon();
     applyDayNight();
     setInterval(applyDayNight, 4000); // smooth enough with the 2.4s CSS transition
+    setInterval(renderMoon, 60 * 60 * 1000); // moon shape drifts over days
   }
 
   /* ---------- SEASON (tracks your real-world season) ---------- */
   function currentSeason() {
     const m = new Date().getMonth();
     return D.SEASONS.find(s => s.months.includes(m)) || D.SEASONS[0];
+  }
+
+  /* ---------- LIVING CONDITIONS: moon, tide, solunar feeding ---------- */
+  const SYNODIC = 29.530588853;
+  const MOON_NAMES = ["new moon", "waxing crescent", "first quarter", "waxing gibbous", "full moon", "waning gibbous", "last quarter", "waning crescent"];
+  function moonInfo(now) {
+    const ref = Date.UTC(2000, 0, 6, 18, 14) / 1000; // a known new moon
+    let frac = (((now.getTime() / 1000 - ref) / 86400) % SYNODIC) / SYNODIC;
+    if (frac < 0) frac += 1;
+    const illum = (1 - Math.cos(2 * Math.PI * frac)) / 2;
+    return { frac, illum, name: MOON_NAMES[Math.round(frac * 8) % 8], waxing: frac < 0.5 };
+  }
+  function solunar(now, moon) {
+    const overhead = (12 + moon.frac * 24) % 24, underfoot = (overhead + 12) % 24;
+    const h = now.getHours() + now.getMinutes() / 60;
+    const near = t => { let d = Math.abs(h - t); return Math.min(d, 24 - d); };
+    const majorD = Math.min(near(overhead), near(underfoot));
+    const minorD = Math.min(near((overhead + 6) % 24), near((overhead + 18) % 24));
+    const moonStr = 0.6 + 0.4 * Math.abs(Math.cos(2 * Math.PI * moon.frac)); // strongest at new/full
+    if (majorD < 1) return { feeding: "major", bonus: 0.5 * moonStr * (1 - majorD) };
+    if (minorD < 0.75) return { feeding: "minor", bonus: 0.25 * moonStr * (1 - minorD / 0.75) };
+    return { feeding: null, bonus: 0 };
+  }
+  function tideInfo(now) {
+    const period = 12.42 * 3600, ph = ((now.getTime() / 1000) % period) / period;
+    const level = Math.sin(2 * Math.PI * ph), c = Math.cos(2 * Math.PI * ph);
+    const moving = Math.abs(c);
+    const state = level > 0.7 ? "high, slack" : level < -0.7 ? "low, slack" : (c > 0 ? "incoming" : "outgoing");
+    return { level, moving, state };
+  }
+  function conditions() {
+    const now = new Date(), moon = moonInfo(now), sol = solunar(now, moon);
+    let speed = 1, rarity = 0;
+    if (sol.feeding) { speed *= 1 - sol.bonus * 0.4; rarity += sol.bonus * 0.15; }
+    let tide = null;
+    if (loc().coastal) { tide = tideInfo(now); if (tide.moving > 0.5) { speed *= 0.9; rarity += 0.04; } }
+    return { moon, sol, tide, speed, rarity };
+  }
+  function conditionText() {
+    const c = conditions();
+    let s = "🌙 " + c.moon.name;
+    if (c.tide) s += " · tide " + c.tide.state;
+    if (c.sol.feeding) s += " · " + (c.sol.feeding === "major" ? "major feed on 🎣" : "minor feed 🎣");
+    return s;
   }
 
   /* ---------- WEATHER (rolls every few minutes) ---------- */

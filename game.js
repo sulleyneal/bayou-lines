@@ -31,6 +31,7 @@
     achievements: [],   // unlocked ids
     bounties: [],       // active bounty instances from The Landing
     camp: { tier: 0, decor: {} }, // home base + decor
+    daily: { date: "", streak: 0, lastDay: "" }, // daily challenge + streak
     trotline: { set: false, ts: 0 }, // opt-in idle line
     log: [],
     settings: { muted: false, volume: 0.6 },
@@ -40,7 +41,7 @@
      Everything but the transient `phase` is saved. Loading deep-merges
      onto defaults so old saves survive new fields in future versions. */
   const SAVE_FIELDS = ["locationId", "unlocked", "bucks", "equip", "stats",
-    "caught", "records", "legends", "flags", "achievements", "bounties", "camp", "trotline", "log", "settings"];
+    "caught", "records", "legends", "flags", "achievements", "bounties", "camp", "daily", "trotline", "log", "settings"];
   let saveLocked = false; // true during reset, so nothing re-saves stale data
 
   function save() {
@@ -158,7 +159,8 @@
 
   function payout(f, w) {
     const currentBonus = loc().current ? 1.15 : 1; // rivers pay a little extra
-    return Math.max(1, Math.round(w * f.value * currentBonus));
+    const featBonus = (state.daily && state.daily.featured === state.locationId) ? 1.2 : 1; // today's hot bite
+    return Math.max(1, Math.round(w * f.value * currentBonus * featBonus));
   }
 
   /* ---------- AMBIENT SCENERY ---------- */
@@ -374,6 +376,7 @@
     state.stats.junkKinds[key] = (state.stats.junkKinds[key] || 0) + 1;
     state.bucks += pity;
     creditBountiesJunk();
+    creditDaily({ junk: true });
     addLog({ emoji: j.emoji, name: j.name, meta: "junk" });
     showCard(j.emoji, "junk haul", j.name, "non-aquatic · released back to society",
       "+" + pity + " ₿ · the parish pays for litter removal, technically", pick([].concat(j.flavor)), "junk");
@@ -469,6 +472,7 @@
     recordSpeciesHere(key);
     noteFlags(f, key);
     if (typeof creditBounties === "function") creditBounties(f, w, key); // wired in Stage E
+    creditDaily({ fish: true, legendary: !!f.legendary, w, key });
     state.bucks += bucks;
     const isPB = isPBnow;
     if (isPB) { state.stats.pb = w; state.stats.pbName = f.name; }
@@ -991,7 +995,86 @@
           <div class="b-prog">${prog}</div>
         </div>`;
     }).join("");
-    $("jobsBody").innerHTML = intro + cards;
+    $("jobsBody").innerHTML = dailyHTML() + '<div class="sectionLabel">Bounties</div>' + intro + cards;
+  }
+
+  /* ---------- DAILY CHALLENGE + STREAK + FEATURED BITE ---------- */
+  function dayStr(d) { d = d || new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
+  function dhash(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = (h * 16777619) >>> 0; } return h; }
+
+  function rollDaily() {
+    const today = dayStr();
+    if (state.daily.date === today) return; // already rolled today
+    const yesterday = dayStr(new Date(Date.now() - 86400000));
+    const streak = (state.daily.lastDay === yesterday) ? (state.daily.streak || 0) + 1 : 1;
+    const h = dhash(today);
+    const tmpl = D.DAILY[h % D.DAILY.length];
+    const span = (tmpl.max || tmpl.min || 1) - (tmpl.min || 0);
+    const roll = tmpl.min ? tmpl.min + (h >> 4) % (span + 1) : 1;
+    const d = { date: today, cid: tmpl.id, kind: tmpl.kind, group: tmpl.group || null,
+      target: tmpl.kind === "weight" || tmpl.kind === "legendary" ? 1 : roll,
+      minWeight: tmpl.kind === "weight" ? roll : 0,
+      reward: tmpl.reward || (tmpl.per || 10) * roll,
+      text: (tmpl.text || "").replace("{N}", roll).replace("{X}", roll),
+      progress: 0, seen: [], done: false,
+      streak, lastDay: today,
+      featured: D.LOCATIONS[(h >> 8) % D.LOCATIONS.length].id };
+    state.daily = d;
+    save();
+    dailyAnnounce = true;
+  }
+  let dailyAnnounce = false;
+
+  function creditDaily(ev) {
+    const d = state.daily;
+    if (!d || d.done || !d.kind) return;
+    let hit = false;
+    if (d.kind === "species" && ev.fish && d.group && d.group.includes(ev.key)) { d.progress++; hit = true; }
+    else if (d.kind === "weight" && ev.fish && ev.w >= d.minWeight) { d.progress = 1; hit = true; }
+    else if (d.kind === "total" && ev.fish) { d.progress++; hit = true; }
+    else if (d.kind === "variety" && ev.fish) { if (!d.seen.includes(ev.key)) { d.seen.push(ev.key); d.progress = d.seen.length; hit = true; } }
+    else if (d.kind === "legendary" && ev.legendary) { d.progress = 1; hit = true; }
+    else if (d.kind === "junk" && ev.junk) { d.progress++; hit = true; }
+    if (!hit) return;
+    if (d.progress >= d.target && !d.done) {
+      d.done = true;
+      const streakBonus = Math.min(d.streak, 10) * 15;
+      const total = d.reward + streakBonus;
+      state.bucks += total;
+      state.stats.dailiesDone = (state.stats.dailiesDone || 0) + 1;
+      toastDaily(total, d.streak);
+      setTimeout(() => sfx("chime"), 120);
+      save(); updateStats(); checkAchievements();
+    }
+    if ($("jobsPanel").classList.contains("open")) renderBoard();
+  }
+
+  function toastDaily(total, streak) {
+    const el = document.createElement("div");
+    el.className = "toast bounty-toast";
+    el.innerHTML = `<span class="t-icon">📅</span><span><span class="t-label">Daily done · ${streak}-day streak</span>+${total} ₿</span>`;
+    $("toasts").appendChild(el);
+    setTimeout(() => el.remove(), 5000);
+  }
+
+  function dailyHTML() {
+    const d = state.daily;
+    if (!d || !d.kind) return "";
+    const featured = D.LOCATIONS.find(l => l.id === d.featured);
+    const pct = Math.min(100, (d.progress / d.target) * 100);
+    const prog = d.kind === "weight" ? (d.done ? "done" : "over " + d.minWeight + " lb")
+      : d.kind === "legendary" ? (d.done ? "done" : "any legendary")
+      : d.progress + " / " + d.target;
+    const streakBonus = Math.min(d.streak, 10) * 15;
+    return `<div class="dailyCard">
+        <div class="b-head"><span class="b-emoji">📅</span><span class="b-giver">Today's Challenge</span>
+          <span class="b-reward">+${d.reward}${streakBonus ? " +" + streakBonus : ""} ₿</span></div>
+        <div class="daily-streak">🔥 ${d.streak}-day streak${streakBonus ? " · +" + streakBonus + " ₿ bonus" : ""}</div>
+        <div class="b-text" style="font-style:normal;color:var(--cream)">${d.text}${d.done ? " ✓" : ""}</div>
+        <div class="b-track"><div class="b-fill" style="width:${pct}%"></div></div>
+        <div class="b-prog">${prog}</div>
+        <div class="daily-feat">🐟 Hot bite today: <b>${featured ? featured.name : "—"}</b> — pays +20% ${state.locationId === d.featured ? "(you're on it!)" : ""}</div>
+      </div>`;
   }
 
   /* ---------- THE CAMP + TROPHY WALL ---------- */
@@ -1114,6 +1197,7 @@
     saltlife: "🌊", guide20: "📖", fullbox: "🧰",
     rainmaker: "🌧️", frontrunner: "🌩️", trotline: "🪝",
     favor: "🤝", landing: "⛪", homestead: "🏕️", trophies: "🏆",
+    daily1: "📅", streak7: "🔥",
   };
 
   function recordSpeciesHere(key) {
@@ -1133,7 +1217,7 @@
   function facade() {
     return {
       stats: state.stats, flags: state.flags, equip: state.equip,
-      caught: state.caught, bucks: state.bucks, camp: state.camp,
+      caught: state.caught, bucks: state.bucks, camp: state.camp, daily: state.daily,
       trophyCount: () => Object.keys(state.records).filter(k => state.records[k].max > 0).length,
       totalCatches: () => state.stats.catches,
       junkCount: k => state.stats.junkKinds[k] || 0,
@@ -1342,10 +1426,12 @@
   startDayNight();
   startWeather();
   applyTheme(loc());
+  rollDaily();      // fresh daily challenge + streak update
   ensureBounties(); // always have a few favors waiting at the landing
   updateStats();
   renderLog();
   checkTrotline(); // welcome-back gift if a line was soaking
+  if (dailyAnnounce) setMsg(`New day on the bayou. <b>Today:</b> ${state.daily.text.toLowerCase()}.`, "tap the water whenever");
   // A returning player should land exactly where they left off.
   if (state.stats.catches || state.stats.junk) {
     setMsg("Right where you left it. The fish kept your spot warm.",

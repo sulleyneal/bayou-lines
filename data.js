@@ -683,6 +683,8 @@
     { id: "landing", name: "Pillar of the Community", desc: "Finish 12 bounties for the regulars.", check: g => (g.stats.bountiesDone || 0) >= 12 },
     { id: "homestead", name: "Home on the Water", desc: "Build the camp all the way up.", check: g => g.camp.tier >= 4 },
     { id: "trophies", name: "Wall of Fame", desc: "Mount 12 different fish on the trophy wall.", check: g => g.trophyCount() >= 12 },
+    { id: "daily1", name: "Showed Up", desc: "Finish a daily challenge.", check: g => (g.stats.dailiesDone || 0) >= 1 },
+    { id: "streak7", name: "Regular Out Here", desc: "Keep a 7-day streak going.", check: g => (g.daily.streak || 0) >= 7 },
     { id: "guide20", name: "Field Notes", desc: "Log 20 different species in the Field Guide.", check: g => g.speciesCaughtCount() >= 20 },
     { id: "fullbox", name: "The Whole Tackle Box", desc: "Catch at least one of every species in the game.", check: g => g.speciesCaughtCount() >= g.speciesTotalCount() },
   ];
@@ -778,6 +780,22 @@
     ],
   };
 
+  /* ============================================================
+     DAILY — one seeded challenge per calendar day (same for everyone),
+     a streak for showing up, and a featured "hot bite" location that
+     pays extra that day. Gentle: miss a day, you just lose the streak.
+     ============================================================ */
+  const DAILY = [
+    { id: "d_panfish", kind: "species", group: ["bluegill", "bream", "redear", "crappie", "blackcrappie"], min: 5, max: 9, per: 11, text: "Land {N} panfish today" },
+    { id: "d_cats",    kind: "species", group: ["channelcat", "bluecat", "flathead"], min: 3, max: 6, per: 20, text: "Land {N} catfish today" },
+    { id: "d_bass",    kind: "species", group: ["largemouth", "smallbass", "trophybass"], min: 3, max: 6, per: 18, text: "Land {N} bass today" },
+    { id: "d_big",     kind: "weight", min: 6, max: 12, reward: 170, text: "Land something over {X} lb today" },
+    { id: "d_haul",    kind: "total", min: 8, max: 15, per: 9, text: "Land {N} fish, any kind, today" },
+    { id: "d_variety", kind: "variety", min: 3, max: 5, per: 26, text: "Land {N} different species today" },
+    { id: "d_junk",    kind: "junk", min: 4, max: 8, per: 8, text: "Haul {N} pieces of junk today" },
+    { id: "d_legend",  kind: "legendary", reward: 420, text: "Cross paths with any legendary today" },
+  ];
+
   window.DATA = { CONFIG, PHASES, GENERIC, S, L, JUNK, EQUIPMENT, LOCATIONS, ACHIEVEMENTS,
-    WEATHER, SEASONS, CHARACTERS, BOUNTY_TEMPLATES, CAMP };
+    WEATHER, SEASONS, CHARACTERS, BOUNTY_TEMPLATES, CAMP, DAILY };
 })();

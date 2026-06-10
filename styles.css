@@ -489,6 +489,11 @@ h1 em{font-style:italic;font-weight:400;color:var(--lantern)}
 .b-cast{font-size:10px;color:var(--cream-dim);margin:2px 0 16px;line-height:1.5}
 .toast.bounty-toast{border-color:var(--good)}
 .toast.bounty-toast .t-label{color:var(--good)}
+.dailyCard{padding:14px 14px 12px;border-radius:14px;margin-bottom:6px;
+  border:1px solid var(--lantern);background:linear-gradient(180deg,rgba(232,193,112,.12),rgba(232,193,112,.03))}
+.daily-streak{font-size:11px;color:#f0b46a;margin:6px 0 2px}
+.daily-feat{font-size:10.5px;color:var(--cream-dim);margin-top:9px;line-height:1.5;border-top:1px dashed rgba(232,193,112,.18);padding-top:8px}
+.daily-feat b{color:var(--accent)}
 
 /* ============ TACKLE BOX (achievements) ============ */
 .achGrid{display:flex;flex-direction:column;gap:8px}

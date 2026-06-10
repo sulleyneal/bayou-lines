@@ -679,6 +679,8 @@
     { id: "rainmaker", name: "Rainmaker", desc: "Land a fish in the rain.", check: g => g.flags.rainCatch },
     { id: "frontrunner", name: "Front-Runner", desc: "Land a fish as a front moves in.", check: g => g.flags.frontCatch },
     { id: "trotline", name: "Set It and Forget It", desc: "Bring in fish on the trotline.", check: g => g.flags.trotline },
+    { id: "favor", name: "Good Neighbor", desc: "Finish your first bounty at the landing.", check: g => (g.stats.bountiesDone || 0) >= 1 },
+    { id: "landing", name: "Pillar of the Community", desc: "Finish 12 bounties for the regulars.", check: g => (g.stats.bountiesDone || 0) >= 12 },
     { id: "guide20", name: "Field Notes", desc: "Log 20 different species in the Field Guide.", check: g => g.speciesCaughtCount() >= 20 },
     { id: "fullbox", name: "The Whole Tackle Box", desc: "Catch at least one of every species in the game.", check: g => g.speciesCaughtCount() >= g.speciesTotalCount() },
   ];

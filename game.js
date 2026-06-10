@@ -22,12 +22,14 @@
       species: {},      // ref -> count
       junkKinds: {},    // junk key -> count
       locSpecies: {},   // locId -> { ref: true }  (for As-Built)
+      bountiesDone: 0,
     },
     caught: {},         // ref -> true (species + legendaries ever landed)
     records: {},        // ref -> { max, count, firstLoc, lastTs }  (Field Guide)
     legends: {},        // legendary ref -> true
     flags: {},          // nightCat, goldenBass, asBuilt, firstSalt
     achievements: [],   // unlocked ids
+    bounties: [],       // active bounty instances from The Landing
     trotline: { set: false, ts: 0 }, // opt-in idle line
     log: [],
     settings: { muted: false, volume: 0.6 },
@@ -37,7 +39,7 @@
      Everything but the transient `phase` is saved. Loading deep-merges
      onto defaults so old saves survive new fields in future versions. */
   const SAVE_FIELDS = ["locationId", "unlocked", "bucks", "equip", "stats",
-    "caught", "records", "legends", "flags", "achievements", "trotline", "log", "settings"];
+    "caught", "records", "legends", "flags", "achievements", "bounties", "trotline", "log", "settings"];
   let saveLocked = false; // true during reset, so nothing re-saves stale data
 
   function save() {
@@ -333,6 +335,7 @@
     state.stats.junk++;
     state.stats.junkKinds[key] = (state.stats.junkKinds[key] || 0) + 1;
     state.bucks += pity;
+    creditBountiesJunk();
     addLog({ emoji: j.emoji, name: j.name, meta: "junk" });
     showCard(j.emoji, "junk haul", j.name, "non-aquatic · released back to society",
       "+" + pity + " ₿ · the parish pays for litter removal, technically", pick([].concat(j.flavor)), "junk");
@@ -454,6 +457,7 @@
     if ($("travelPanel").classList.contains("open")) renderTravel();
     if ($("boxPanel").classList.contains("open")) renderBox();
     if ($("guidePanel").classList.contains("open")) renderGuide();
+    if ($("jobsPanel").classList.contains("open")) renderBoard();
   }
 
   function showCard(emoji, badge, name, detail, value, flavor, cls) {
@@ -737,6 +741,104 @@
       pick(l.idle));
   }
 
+  /* ---------- THE LANDING (bounties) ----------
+     The regulars post easygoing favors. Catch toward them as you fish;
+     finishing one pays out and a fresh one takes its place. */
+  const NUM_BOUNTIES = 3;
+  let bountySeq = 0;
+  function bountyUID() { return "b" + (Date.now().toString(36)) + (bountySeq++); }
+
+  function newBounty(usedTmplIds) {
+    const avail = D.BOUNTY_TEMPLATES.filter(t => !usedTmplIds.includes(t.id));
+    const tmpl = pick(avail.length ? avail : D.BOUNTY_TEMPLATES);
+    const b = { uid: bountyUID(), tmpl: tmpl.id, giver: tmpl.giver, kind: tmpl.kind,
+      group: tmpl.group || null, noun: tmpl.noun || null, progress: 0, seen: [], done: false };
+    if (tmpl.kind === "weight") {
+      b.minWeight = Math.round(rand(tmpl.min, tmpl.max));
+      b.target = 1; b.reward = tmpl.reward;
+      b.text = tmpl.flavor.replace("{X}", b.minWeight);
+    } else if (tmpl.kind === "legendary") {
+      b.target = 1; b.reward = tmpl.reward; b.text = tmpl.flavor;
+    } else { // species, junk, variety
+      b.target = Math.round(rand(tmpl.min, tmpl.max));
+      b.reward = (tmpl.perReward || 10) * b.target;
+      b.text = tmpl.flavor.replace("{N}", b.target);
+    }
+    return b;
+  }
+  function ensureBounties() {
+    while (state.bounties.length < NUM_BOUNTIES) {
+      state.bounties.push(newBounty(state.bounties.map(b => b.tmpl)));
+    }
+  }
+
+  function creditBounties(f, w, key) {
+    creditBountyEvent({ fish: true, legendary: !!f.legendary, w, key });
+  }
+  function creditBountiesJunk() { creditBountyEvent({ junk: true }); }
+
+  function creditBountyEvent(ev) {
+    const done = [];
+    let changed = false;
+    for (const b of state.bounties) {
+      if (b.done) continue;
+      let hit = false;
+      if (b.kind === "species" && ev.fish && b.group && b.group.includes(ev.key)) { b.progress++; hit = true; }
+      else if (b.kind === "weight" && ev.fish && ev.w >= b.minWeight) { b.progress = 1; hit = true; }
+      else if (b.kind === "variety" && ev.fish) { if (!b.seen.includes(ev.key)) { b.seen.push(ev.key); b.progress = b.seen.length; hit = true; } }
+      else if (b.kind === "legendary" && ev.legendary) { b.progress = 1; hit = true; }
+      else if (b.kind === "junk" && ev.junk) { b.progress++; hit = true; }
+      if (hit) { changed = true; if (b.progress >= b.target) { b.done = true; done.push(b); } }
+    }
+    if (done.length) settleBounties(done);
+    if (changed && $("jobsPanel").classList.contains("open")) renderBoard();
+  }
+
+  function settleBounties(done) {
+    for (const b of done) {
+      state.bucks += b.reward;
+      state.stats.bountiesDone = (state.stats.bountiesDone || 0) + 1;
+      const c = D.CHARACTERS[b.giver];
+      toastBounty(c, b.reward);
+      state.bounties = state.bounties.filter(x => x.uid !== b.uid);
+    }
+    ensureBounties();
+    updateStats(); save(); checkAchievements();
+    setTimeout(() => sfx("chime"), 120);
+  }
+
+  function toastBounty(c, reward) {
+    const el = document.createElement("div");
+    el.className = "toast bounty-toast";
+    el.innerHTML = `<span class="t-icon">${c.emoji}</span>
+      <span><span class="t-label">Bounty paid · ${c.name}</span>+${reward} ₿, and thanks</span>`;
+    $("toasts").appendChild(el);
+    setTimeout(() => el.remove(), 5000);
+  }
+
+  function renderBoard() {
+    ensureBounties();
+    const intro = '<div class="b-cast">' +
+      Object.values(D.CHARACTERS).map(c => `${c.emoji} <b style="color:var(--cream)">${c.name}</b> — ${c.blurb}`).join("<br>") +
+      '</div>';
+    const cards = state.bounties.map(b => {
+      const c = D.CHARACTERS[b.giver];
+      const pct = Math.min(100, (b.progress / b.target) * 100);
+      const prog = b.kind === "weight" ? (b.progress ? "done" : "land one over " + b.minWeight + " lb")
+        : b.kind === "legendary" ? (b.progress ? "done" : "any named legendary")
+        : b.progress + " / " + b.target;
+      return `<div class="bounty">
+          <div class="b-head"><span class="b-emoji">${c.emoji}</span>
+            <span class="b-giver">${c.name}</span>
+            <span class="b-reward">+${b.reward} ₿</span></div>
+          <div class="b-text">${b.text}</div>
+          <div class="b-track"><div class="b-fill" style="width:${pct}%"></div></div>
+          <div class="b-prog">${prog}</div>
+        </div>`;
+    }).join("");
+    $("jobsBody").innerHTML = intro + cards;
+  }
+
   /* ---------- FIELD GUIDE ---------- */
   // where each fish can be found (species + legendary homes), for hints
   const REF_LOCS = {};
@@ -795,6 +897,7 @@
     substantial: "✅", firstlegend: "👑", submittal: "🏆", gator: "🐊", rich: "💵",
     saltlife: "🌊", guide20: "📖", fullbox: "🧰",
     rainmaker: "🌧️", frontrunner: "🌩️", trotline: "🪝",
+    favor: "🤝", landing: "⛪",
   };
 
   function recordSpeciesHere(key) {
@@ -929,6 +1032,7 @@
   $("travelBtn").addEventListener("click", () => { renderTravel(); openPanel("travelPanel"); });
   $("boxBtn").addEventListener("click", () => { renderBox(); openPanel("boxPanel"); });
   $("guideBtn").addEventListener("click", () => { renderGuide(); openPanel("guidePanel"); });
+  $("jobsBtn").addEventListener("click", () => { renderBoard(); openPanel("jobsPanel"); });
   $("settingsBtn").addEventListener("click", () => openPanel("settingsPanel"));
   document.querySelectorAll(".panelClose").forEach(b =>
     b.addEventListener("click", () => closePanel(b.dataset.close)));
@@ -994,6 +1098,7 @@
   startDayNight();
   startWeather();
   applyTheme(loc());
+  ensureBounties(); // always have a few favors waiting at the landing
   updateStats();
   renderLog();
   checkTrotline(); // welcome-back gift if a line was soaking

@@ -28,6 +28,7 @@
     legends: {},        // legendary ref -> true
     flags: {},          // nightCat, goldenBass, asBuilt, firstSalt
     achievements: [],   // unlocked ids
+    trotline: { set: false, ts: 0 }, // opt-in idle line
     log: [],
     settings: { muted: false, volume: 0.6 },
   };
@@ -36,7 +37,7 @@
      Everything but the transient `phase` is saved. Loading deep-merges
      onto defaults so old saves survive new fields in future versions. */
   const SAVE_FIELDS = ["locationId", "unlocked", "bucks", "equip", "stats",
-    "caught", "records", "legends", "flags", "achievements", "log", "settings"];
+    "caught", "records", "legends", "flags", "achievements", "trotline", "log", "settings"];
   let saveLocked = false; // true during reset, so nothing re-saves stale data
 
   function save() {
@@ -118,9 +119,12 @@
     // Apply lure species-bias and a rarity tilt: rarer (lower base weight)
     // entries get nudged up as lures improve.
     const ph = phaseId;
+    const seasonBias = currentSeason().bias || {};
+    const weatherBoost = weather ? weather.rarityBoost : 0;
     const weighted = table.map(e => {
-      let w = e.weight * (lr.bias[refKey(e.def)] || 1);
-      w *= 1 + lr.rarityBoost * ((maxW - e.weight) / maxW);
+      const k = refKey(e.def);
+      let w = e.weight * (lr.bias[k] || 1) * (seasonBias[k] || 1);
+      w *= 1 + (lr.rarityBoost + weatherBoost) * ((maxW - e.weight) / maxW);
       if (e.def.time && e.def.time.includes(ph)) w *= D.CONFIG.timeBiasMult; // bite better now
       return { def: e.def, w };
     });
@@ -217,8 +221,12 @@
     stopIdleTicker();
     idleTicker = setInterval(() => {
       if (state.phase !== "waiting") return;
-      // mostly location color, occasionally a gentle time-of-day hint
-      setMsg(Math.random() < 0.3 ? currentPhase().hint : pick(loc().idle));
+      // mostly location color, occasionally a gentle hint about the conditions
+      const r = Math.random();
+      if (r < 0.5) setMsg(pick(loc().idle));
+      else if (r < 0.68) setMsg(currentPhase().hint);
+      else if (r < 0.85 && weather) setMsg(weather.report);
+      else setMsg(currentSeason().report);
     }, 7000);
   }
   function stopIdleTicker() { if (idleTicker) { clearInterval(idleTicker); idleTicker = null; } }
@@ -252,7 +260,7 @@
     setMsg("Line's in. Now we do the hard part: nothing.");
     startIdleTicker();
 
-    const wait = rand(D.CONFIG.baseWaitMs[0], D.CONFIG.baseWaitMs[1]);
+    const wait = rand(D.CONFIG.baseWaitMs[0], D.CONFIG.baseWaitMs[1]) * (weather ? weather.biteSpeed : 1);
     biteTimer = setTimeout(nibble, wait);
   }
 
@@ -404,13 +412,7 @@
     const key = refKey(f);
     state.stats.catches++;
     state.stats.perLoc[state.locationId] = (state.stats.perLoc[state.locationId] || 0) + 1;
-    state.stats.species[key] = (state.stats.species[key] || 0) + 1;
-    state.caught[key] = true;
-    const rec = state.records[key] || (state.records[key] = { max: 0, count: 0, firstLoc: state.locationId, lastTs: 0 });
-    rec.count++;
-    rec.lastTs = Date.now();
-    if (w > rec.max) rec.max = w;
-    if (f.legendary) state.legends[key] = true;
+    recordCatch(f, w, key);
     recordSpeciesHere(key);
     noteFlags(f, key);
     if (typeof creditBounties === "function") creditBounties(f, w, key); // wired in Stage E
@@ -521,7 +523,7 @@
   function applyDayNight() {
     const f = dayFraction();
     const L = lightAt(f);
-    $("scene").style.filter = `brightness(${L.b.toFixed(3)}) saturate(${L.s.toFixed(3)}) hue-rotate(${L.h.toFixed(1)}deg)`;
+    $("scene").style.filter = `brightness(${L.b.toFixed(3)}) saturate(${L.s.toFixed(3)}) hue-rotate(${L.h.toFixed(1)}deg) ${currentSeason().tint}`;
     $("stars").style.opacity = Math.max(0, (L.dark - 0.45) / 0.55).toFixed(2);
     // sun rides high at midday, sinks and fades into the night
     const sunUp = Math.max(0, 1 - L.dark * 1.3);
@@ -538,6 +540,91 @@
   function startDayNight() {
     applyDayNight();
     setInterval(applyDayNight, 4000); // smooth enough with the 2.4s CSS transition
+  }
+
+  /* ---------- SEASON (tracks your real-world season) ---------- */
+  function currentSeason() {
+    const m = new Date().getMonth();
+    return D.SEASONS.find(s => s.months.includes(m)) || D.SEASONS[0];
+  }
+
+  /* ---------- WEATHER (rolls every few minutes) ---------- */
+  let weather = null;
+  function pickWeather() {
+    const t = D.WEATHER.reduce((s, w) => s + w.weight, 0);
+    let r = Math.random() * t;
+    for (const w of D.WEATHER) { if ((r -= w.weight) <= 0) return w; }
+    return D.WEATHER[0];
+  }
+  function setWeather(w, announce) {
+    weather = w;
+    const fx = $("weatherFx");
+    fx.className = w.fx ? "fx-" + w.fx : "";
+    const season = currentSeason();
+    $("weatherChip").textContent = w.label + " · " + season.label;
+    $("weatherChip").title = w.report + "  —  " + season.report;
+    if (announce && state.phase === "idle") setMsg("The weather's shifting. " + w.report);
+  }
+  function startWeather() {
+    setWeather(pickWeather(), false);
+    setInterval(() => { const nw = pickWeather(); if (!weather || nw.id !== weather.id) setWeather(nw, true); }, 4 * 60 * 1000);
+  }
+
+  /* ---------- shared catch bookkeeping (used by the rod and the trotline) ---------- */
+  function recordCatch(f, w, key) {
+    state.stats.species[key] = (state.stats.species[key] || 0) + 1;
+    state.caught[key] = true;
+    const rec = state.records[key] || (state.records[key] = { max: 0, count: 0, firstLoc: state.locationId, lastTs: 0 });
+    rec.count++;
+    rec.lastTs = Date.now();
+    if (w > rec.max) rec.max = w;
+    if (f.legendary) state.legends[key] = true;
+  }
+
+  /* ---------- THE TROTLINE (opt-in idle) ----------
+     Set it before you go; it fishes slow while you're away. Gentle by
+     design — capped, modest pay, common fish only, never required. */
+  const TROT = { minutesPerFish: 12, maxFish: 8, capHours: 6, payRate: 0.7 };
+  function trotlineEligible() { return boat().tier >= 1; }
+  function trotPick() {
+    const sp = loc().species;
+    const t = sp.reduce((s, e) => s + e.weight, 0);
+    let r = Math.random() * t;
+    for (const e of sp) { if ((r -= e.weight) <= 0) return D.S[e.ref]; }
+    return D.S[sp[0].ref];
+  }
+  function setTrotline() {
+    if (!trotlineEligible()) return;
+    state.trotline = { set: true, ts: Date.now() };
+    save(); renderTravel();
+    setMsg("Trotline's out. It'll fish slow while you're away.", "come back whenever — it doesn't clock out");
+  }
+  function checkTrotline() {
+    const t = state.trotline;
+    if (!t || !t.set || !t.ts) return;
+    const mins = Math.min((Date.now() - t.ts) / 60000, TROT.capHours * 60);
+    const n = Math.min(Math.floor(mins / TROT.minutesPerFish), TROT.maxFish);
+    if (n <= 0) return; // not enough soak time yet — leave it set
+    let bucks = 0, pbHit = false;
+    for (let i = 0; i < n; i++) {
+      const f = trotPick();
+      const w = +rand(f.w[0], f.w[0] + (f.w[1] - f.w[0]) * 0.6).toFixed(1); // smaller average than rod
+      const key = refKey(f);
+      state.stats.catches++;
+      state.stats.perLoc[state.locationId] = (state.stats.perLoc[state.locationId] || 0) + 1;
+      recordCatch(f, w, key);
+      recordSpeciesHere(key);
+      bucks += Math.max(1, Math.round(payout(f, w) * TROT.payRate));
+      if (w > state.stats.pb) { state.stats.pb = w; state.stats.pbName = f.name; pbHit = true; }
+      addLog({ emoji: f.emoji, name: f.name, meta: w + " lb · trotline", pb: false });
+    }
+    state.bucks += bucks;
+    state.flags.trotline = true;
+    state.trotline = { set: false, ts: 0 };
+    updateStats(); save(); checkAchievements();
+    showCard("🪝", "trotline", "The trotline came through",
+      n + (n === 1 ? " fish" : " fish") + " while you were gone" + (pbHit ? " · new personal best in there" : ""),
+      "+" + bucks + " ₿", "Quiet, steady work. The bayou doesn't clock out, and neither does the trotline.", "");
   }
 
   /* ---------- THEMING ---------- */
@@ -572,8 +659,29 @@
     return { open: rows.every(r => r.met), rows };
   }
 
+  function trotlineCardHTML() {
+    if (!trotlineEligible()) {
+      return `<div class="trotCard"><div class="trot-title">🪝 The Trotline</div>
+        <div class="trot-desc">A set line that fishes for you while you're away. You'll need a boat to run one — see the Shop.</div></div>`;
+    }
+    const t = state.trotline;
+    let status, btn;
+    if (t.set) {
+      const mins = Math.floor((Date.now() - t.ts) / 60000);
+      const soaking = Math.min(Math.floor(mins / TROT.minutesPerFish), TROT.maxFish);
+      status = `<div class="trot-status">Out now · soaking ${mins} min · about ${soaking} on the line so far (caps at ${TROT.maxFish}).</div>`;
+      btn = `<button class="trotBtn" disabled>set & soaking…</button>`;
+    } else {
+      status = `<div class="trot-status">Not set. Drop it before you head out — pull it when you're back.</div>`;
+      btn = `<button class="trotBtn" data-trot="set">Set the trotline</button>`;
+    }
+    return `<div class="trotCard"><div class="trot-title">🪝 The Trotline</div>
+      <div class="trot-desc">Set a line, go live your life. It lands a few while you're gone — modest pay, common fish, no rush.</div>
+      ${status}${btn}</div>`;
+  }
+
   function renderTravel() {
-    $("travelBody").innerHTML = D.LOCATIONS.map(l => {
+    $("travelBody").innerHTML = trotlineCardHTML() + D.LOCATIONS.map(l => {
       const here = l.id === state.locationId;
       const unlocked = isUnlocked(l.id);
       const g = gate(l);
@@ -600,6 +708,8 @@
       b.addEventListener("click", () => travelTo(b.dataset.go)));
     $("travelBody").querySelectorAll("[data-unlock]").forEach(b =>
       b.addEventListener("click", () => unlockAndGo(b.dataset.unlock)));
+    const trotBtn = $("travelBody").querySelector('[data-trot="set"]');
+    if (trotBtn) trotBtn.addEventListener("click", setTrotline);
   }
 
   function unlockAndGo(id) {
@@ -684,6 +794,7 @@
     firstboat: "🛶", bassboat: "🚤", fullrod: "📐", travel3: "🗺️", asbuilt: "📋",
     substantial: "✅", firstlegend: "👑", submittal: "🏆", gator: "🐊", rich: "💵",
     saltlife: "🌊", guide20: "📖", fullbox: "🧰",
+    rainmaker: "🌧️", frontrunner: "🌩️", trotline: "🪝",
   };
 
   function recordSpeciesHere(key) {
@@ -696,6 +807,8 @@
     if (CATFISH.includes(key) && phaseId === "night") state.flags.nightCat = true;
     if (BASSES.includes(key) && phaseId === "golden") state.flags.goldenBass = true;
     if (SALTIES.includes(key)) state.flags.firstSalt = true;
+    if (weather && weather.id === "rain") state.flags.rainCatch = true;
+    if (weather && weather.id === "front") state.flags.frontCatch = true;
   }
 
   function facade() {
@@ -879,9 +992,11 @@
   startSwimmers();
   applySettingsUI();
   startDayNight();
+  startWeather();
   applyTheme(loc());
   updateStats();
   renderLog();
+  checkTrotline(); // welcome-back gift if a line was soaking
   // A returning player should land exactly where they left off.
   if (state.stats.catches || state.stats.junk) {
     setMsg("Right where you left it. The fish kept your spot warm.",

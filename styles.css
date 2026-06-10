@@ -75,6 +75,24 @@ body:not(.dark) .firefly{opacity:0 !important;animation:none}
 @keyframes fly{from{transform:translate(0,0)}to{transform:translate(50px,-26px)}}
 @keyframes blink{0%,100%{opacity:0}45%,60%{opacity:.95}}
 
+/* ============ WEATHER FX ============ */
+#weatherFx{position:absolute;inset:0;pointer-events:none;z-index:2;opacity:0;transition:opacity 3s linear}
+#weatherFx.on{opacity:1}
+/* overcast / clouds: soft gray veil */
+#weatherFx.fx-overcast{background:linear-gradient(to bottom,rgba(140,150,160,.28),rgba(120,130,140,.12) 40%,transparent);opacity:1}
+#weatherFx.fx-clouds{background:linear-gradient(to bottom,rgba(180,185,195,.12),transparent 35%);opacity:1}
+/* fog: drifting white banks */
+#weatherFx.fx-fog{opacity:1;background:linear-gradient(to bottom,rgba(228,230,232,.42),rgba(220,224,228,.20) 45%,rgba(220,224,228,.30));animation:fogDrift 26s ease-in-out infinite alternate}
+@keyframes fogDrift{from{background-position:0 0;opacity:.85}to{background-position:60px 0;opacity:1}}
+/* front: dark, moody ceiling */
+#weatherFx.fx-front{opacity:1;background:linear-gradient(to bottom,rgba(40,44,58,.5),rgba(50,54,66,.22) 45%,transparent)}
+/* rain: layered streaks */
+#weatherFx.fx-rain{opacity:1;background:
+  repeating-linear-gradient(105deg,rgba(200,214,222,.16) 0 1px,transparent 1px 7px),
+  linear-gradient(to bottom,rgba(70,80,96,.28),rgba(70,80,96,.10) 45%,transparent);
+  animation:rainFall .5s linear infinite}
+@keyframes rainFall{from{background-position:0 0,0 0}to{background-position:-14px 24px,0 0}}
+
 /* ============ LINE & BOBBER ============ */
 #line{
   position:absolute;width:1px;background:rgba(242,232,213,.4);
@@ -148,6 +166,22 @@ h1 em{font-style:italic;font-weight:400;color:var(--lantern)}
 #stats b{color:var(--lantern);font-weight:500}
 #stBucks{color:var(--good)}
 #timeChip{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream-dim)}
+#weatherChip{font-size:10px;letter-spacing:.06em;color:var(--accent)}
+
+/* trotline card (in Travel) */
+.trotCard{
+  padding:13px 15px;border-radius:14px;margin-bottom:16px;
+  border:1px dashed rgba(232,193,112,.3);background:rgba(232,193,112,.04);
+}
+.trot-title{font-family:'Fraunces',serif;font-weight:600;font-size:14px;color:var(--lantern);display:flex;align-items:center;gap:7px}
+.trot-desc{font-size:10.5px;color:var(--cream-dim);line-height:1.5;margin-top:5px}
+.trot-status{font-size:10.5px;color:var(--accent);margin-top:7px}
+.trotBtn{
+  margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;
+  padding:8px 16px;border-radius:999px;cursor:pointer;
+  background:var(--ui-panel);color:var(--good);border:1px solid rgba(127,176,105,.45);
+}
+.trotBtn:disabled{color:var(--cream-dim);border-color:rgba(232,193,112,.14);cursor:default}
 
 /* ============ MESSAGE + BUTTONS ============ */
 #message{

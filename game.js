@@ -189,6 +189,25 @@
     setTimeout(() => r.remove(), 1700);
   }
 
+  // decorative fish cruising under the surface
+  const FISH_SVG = '<svg viewBox="0 0 44 18" aria-hidden="true"><path d="M3 9 Q13 1 28 5 Q37 7 41 9 Q37 11 28 13 Q13 17 3 9 Z"/><path d="M28 5 L40 1 L37 9 L40 17 L28 13 Z"/></svg>';
+  function spawnSwimmer() {
+    if (document.hidden) return;
+    const s = document.createElement("div");
+    s.className = "swimmer" + (Math.random() < 0.5 ? " l" : "");
+    s.style.top = (28 + Math.random() * 55) + "%";
+    s.style.width = (28 + Math.random() * 26) + "px";
+    s.style.opacity = (0.10 + Math.random() * 0.14).toFixed(2);
+    s.style.animationDuration = (12 + Math.random() * 9) + "s";
+    s.innerHTML = FISH_SVG;
+    water.appendChild(s);
+    setTimeout(() => s.remove(), 22000);
+  }
+  function startSwimmers() {
+    const loop = () => { spawnSwimmer(); swimT = setTimeout(loop, 3500 + Math.random() * 6000); };
+    let swimT = setTimeout(loop, 1500);
+  }
+
   function setMsg(main, sub) {
     msg.innerHTML = main + (sub ? '<span class="sub">' + sub + "</span>" : "");
   }
@@ -275,62 +294,145 @@
     setMsg(pick(D.GENERIC.miss));
   }
 
-  function reel() {
-    clearTimers();
-    state.phase = "idle";
-    resetTackle();
-    ripple(bobberPos.x, bobberPos.y);
+  /* ---------- THE STRIKE & THE FIGHT (no-fail) ----------
+     Tap on the bite to set the hook. Junk comes straight in. A fish
+     starts a gentle give-and-take: tap to reel it in faster, or just
+     watch and it still lands. Surges are 'let it run' beats — a pause,
+     never a loss. Bigger fish = a longer, better fight. */
+  let fight = null; // { f, w, prog, target, surge, tick, surgeT }
 
-    if (Math.random() < junkChance()) {
-      const { key, def: j } = pickJunk();
-      const pity = Math.round(rand(D.CONFIG.junkPity[0], D.CONFIG.junkPity[1]));
-      state.stats.junk++;
-      state.stats.junkKinds[key] = (state.stats.junkKinds[key] || 0) + 1;
-      state.bucks += pity;
-      addLog({ emoji: j.emoji, name: j.name, meta: "junk" });
-      showCard(j.emoji, "junk haul", j.name, "non-aquatic · released back to society",
-        "+" + pity + " ₿ · the parish pays for litter removal, technically", pick([].concat(j.flavor)), "junk");
-    } else {
-      const f = pickFish();
-      const w = +rand(f.w[0], f.w[1]).toFixed(1);
-      if (breakOff(f, w)) {
-        addLog({ emoji: "〰️", name: "The one that got away", meta: "snap" });
-        showCard("〰️", "got away", "The one that got away", "no harm done · no score kept",
-          "", pick(D.GENERIC.breakoff), "junk");
-        updateStats(); save();
-        setMsg("Heavier line lives at the tackle shop, when you're ready. No rush.");
-        return;
-      }
-      const bucks = payout(f, w);
-      const key = refKey(f);
-      state.stats.catches++;
-      state.stats.perLoc[state.locationId] = (state.stats.perLoc[state.locationId] || 0) + 1;
-      state.stats.species[key] = (state.stats.species[key] || 0) + 1;
-      state.caught[key] = true;
-      const rec = state.records[key] || (state.records[key] = { max: 0, count: 0, firstLoc: state.locationId, lastTs: 0 });
-      rec.count++;
-      rec.lastTs = Date.now();
-      if (w > rec.max) rec.max = w;
-      if (f.legendary) state.legends[key] = true;
-      recordSpeciesHere(key);
-      noteFlags(f, key);
-      state.bucks += bucks;
-      const isPB = w > state.stats.pb;
-      if (isPB) { state.stats.pb = w; state.stats.pbName = f.name; }
-      sfx("splash");
-      if (isPB || f.legendary) setTimeout(() => sfx("chime"), 260);
-      const badge = f.legendary ? "legendary" : "catch";
-      const cls = f.legendary ? "legendary" : "";
-      addLog({ emoji: f.emoji, name: f.name, meta: w + " lb", pb: isPB, legend: !!f.legendary });
-      showCard(f.emoji, badge, f.name,
-        w + " lb · catch & release" + (isPB ? " · new personal best" : ""),
-        "+" + bucks + " ₿", pick(f.flavor), cls);
-    }
+  function strike() {
+    clearTimers();
+    ripple(bobberPos.x, bobberPos.y);
+    if (Math.random() < junkChance()) { resolveJunk(); return; }
+    const f = pickFish();
+    const w = +rand(f.w[0], f.w[1]).toFixed(1);
+    if (breakOff(f, w)) { resolveBreakoff(); return; }
+    startFight(f, w);
+  }
+
+  function afterCatch() {
     updateStats();
     save();
     checkAchievements();
     setMsg("Back to the water whenever you're ready. No rush. Genuinely none.");
   }
+
+  function resolveJunk() {
+    state.phase = "idle"; resetTackle();
+    const { key, def: j } = pickJunk();
+    const pity = Math.round(rand(D.CONFIG.junkPity[0], D.CONFIG.junkPity[1]));
+    state.stats.junk++;
+    state.stats.junkKinds[key] = (state.stats.junkKinds[key] || 0) + 1;
+    state.bucks += pity;
+    addLog({ emoji: j.emoji, name: j.name, meta: "junk" });
+    showCard(j.emoji, "junk haul", j.name, "non-aquatic · released back to society",
+      "+" + pity + " ₿ · the parish pays for litter removal, technically", pick([].concat(j.flavor)), "junk");
+    afterCatch();
+  }
+
+  function resolveBreakoff() {
+    state.phase = "idle"; resetTackle();
+    addLog({ emoji: "〰️", name: "The one that got away", meta: "snap" });
+    showCard("〰️", "got away", "The one that got away", "no harm done · no score kept",
+      "", pick(D.GENERIC.breakoff), "junk");
+    updateStats(); save();
+    setMsg("Heavier line lives at the tackle shop, when you're ready. No rush.");
+  }
+
+  // fight "length" in arbitrary units — bigger fish take longer, gently capped
+  function fightTarget(w) { return Math.min(0.6 + w * 0.045, 2.6); }
+
+  function startFight(f, w) {
+    state.phase = "fighting";
+    fight = { f, w, prog: 0, target: fightTarget(w), surge: false };
+    bobber.className = "bite";
+    btn.textContent = "REEL!"; btn.classList.add("urgent");
+    setMsg("<b>On!</b> Reel it in — tap to bring it, ease off when it runs.");
+    showFightBar(f);
+    fight.surgeT = setTimeout(triggerSurge, rand(900, 1700));
+    fight.tick = setInterval(fightLoop, 110);
+  }
+
+  function fightLoop() {
+    if (!fight) return;
+    if (!fight.surge) fight.prog += 0.030; // passive reel-in: just watching still lands it (~9s)
+    updateFightBar();
+    if (fight.prog >= fight.target) landFish();
+  }
+
+  function fightTap() {
+    if (!fight || fight.surge) return; // during a surge, you let it run
+    fight.prog += fight.target * 0.15; // a tap is worth a good crank
+    bobber.classList.add("nibble");
+    setTimeout(() => bobber && bobber.classList.remove("nibble"), 90);
+    sfx("tick");
+    updateFightBar();
+    if (fight.prog >= fight.target) landFish();
+  }
+
+  function triggerSurge() {
+    if (!fight) return;
+    fight.surge = true;
+    setFightLabel("let it run…");
+    $("fightBar").classList.add("surge");
+    sfx("splash");
+    setTimeout(() => {
+      if (!fight) return;
+      fight.surge = false;
+      $("fightBar").classList.remove("surge");
+      setFightLabel("reel!");
+      fight.surgeT = setTimeout(triggerSurge, rand(1200, 2300));
+    }, rand(650, 950));
+  }
+
+  function endFight() {
+    if (!fight) return;
+    clearInterval(fight.tick);
+    clearTimeout(fight.surgeT);
+    fight = null;
+    hideFightBar();
+  }
+
+  function landFish() {
+    const f = fight.f, w = fight.w;
+    endFight();
+    state.phase = "idle"; resetTackle();
+    ripple(bobberPos.x, bobberPos.y);
+
+    const bucks = payout(f, w);
+    const key = refKey(f);
+    state.stats.catches++;
+    state.stats.perLoc[state.locationId] = (state.stats.perLoc[state.locationId] || 0) + 1;
+    state.stats.species[key] = (state.stats.species[key] || 0) + 1;
+    state.caught[key] = true;
+    const rec = state.records[key] || (state.records[key] = { max: 0, count: 0, firstLoc: state.locationId, lastTs: 0 });
+    rec.count++;
+    rec.lastTs = Date.now();
+    if (w > rec.max) rec.max = w;
+    if (f.legendary) state.legends[key] = true;
+    recordSpeciesHere(key);
+    noteFlags(f, key);
+    if (typeof creditBounties === "function") creditBounties(f, w, key); // wired in Stage E
+    state.bucks += bucks;
+    const isPB = w > state.stats.pb;
+    if (isPB) { state.stats.pb = w; state.stats.pbName = f.name; }
+    sfx("splash");
+    if (isPB || f.legendary) setTimeout(() => sfx("chime"), 260);
+    const badge = f.legendary ? "legendary" : "catch";
+    const cls = f.legendary ? "legendary" : "";
+    addLog({ emoji: f.emoji, name: f.name, meta: w + " lb", pb: isPB, legend: !!f.legendary });
+    showCard(f.emoji, badge, f.name,
+      w + " lb · catch & release" + (isPB ? " · new personal best" : ""),
+      "+" + bucks + " ₿", pick(f.flavor), cls);
+    afterCatch();
+  }
+
+  /* fight bar UI */
+  function showFightBar(f) { $("fightFish").textContent = f.emoji; $("fightFill").style.width = "0%"; setFightLabel("reel!"); $("fightBar").classList.remove("surge"); $("fightBar").classList.add("show"); }
+  function updateFightBar() { if (fight) $("fightFill").style.width = Math.min(100, (fight.prog / fight.target) * 100) + "%"; }
+  function setFightLabel(t) { $("fightLabel").textContent = t; }
+  function hideFightBar() { $("fightBar").classList.remove("show", "surge"); }
 
   function clearTimers() {
     [biteTimer, nibbleTimer, missTimer].forEach(t => t && clearTimeout(t));
@@ -513,7 +615,7 @@
 
   function travelTo(id, fresh) {
     if (!isUnlocked(id)) return;
-    if (state.phase !== "idle") { miss(); } // reel in before we run off
+    if (state.phase !== "idle") { endFight(); clearTimers(); state.phase = "idle"; resetTackle(); } // reel in before we run off
     state.locationId = id;
     const l = D.LOCATIONS.find(x => x.id === id);
     applyTheme(l);
@@ -742,7 +844,8 @@
   function act(x, y) {
     if ($("catchCard").classList.contains("show")) { $("catchCard").classList.remove("show"); return; }
     if (state.phase === "idle") cast(x, y);
-    else if (state.phase === "bite") reel();
+    else if (state.phase === "bite") strike();
+    else if (state.phase === "fighting") fightTap();
     else if (state.phase === "nibble") {
       clearTimers();
       state.phase = "idle";
@@ -773,6 +876,7 @@
   load();
   if (!isUnlocked(state.locationId)) state.locationId = "pond"; // safety net
   scatter();
+  startSwimmers();
   applySettingsUI();
   startDayNight();
   applyTheme(loc());

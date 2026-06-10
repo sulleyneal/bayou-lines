@@ -99,6 +99,32 @@ body:not(.dark) .firefly{opacity:0 !important;animation:none}
 }
 @keyframes ripple{from{width:10px;height:10px;opacity:.8;margin:-5px}to{width:90px;height:90px;opacity:0;margin:-45px}}
 
+/* fish cruising under the surface (decorative) */
+.swimmer{position:absolute;left:0;width:40px;opacity:.18;pointer-events:none;animation:swimR linear forwards;will-change:transform}
+.swimmer svg{width:100%;display:block;fill:#0a1a16}
+.swimmer.l{animation-name:swimL}
+.swimmer.l svg{transform:scaleX(-1)}
+@keyframes swimR{from{transform:translateX(-12vw)}to{transform:translateX(114vw)}}
+@keyframes swimL{from{transform:translateX(114vw)}to{transform:translateX(-12vw)}}
+
+/* the fight bar */
+#fightBar{
+  position:fixed;left:50%;bottom:104px;transform:translateX(-50%);
+  display:none;align-items:center;gap:10px;z-index:10;
+  background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:999px;
+  padding:8px 16px;backdrop-filter:blur(6px);box-shadow:0 4px 20px rgba(0,0,0,.35);
+  max-width:min(420px,86vw);
+}
+#fightBar.show{display:flex}
+#fightFish{font-size:20px;flex-shrink:0}
+#fightTrack{width:clamp(120px,40vw,220px);height:9px;border-radius:999px;background:rgba(232,193,112,.16);overflow:hidden}
+#fightFill{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--good),var(--lantern));transition:width .11s linear}
+#fightLabel{font-size:11px;color:var(--lantern);letter-spacing:.06em;white-space:nowrap;min-width:54px;text-align:left}
+#fightBar.surge #fightFill{background:linear-gradient(90deg,var(--dusk-lo),#d8553f)}
+#fightBar.surge #fightLabel{color:#f0b48a}
+#fightBar.surge{border-color:rgba(216,85,63,.6);animation:fightPulse .5s ease-in-out infinite alternate}
+@keyframes fightPulse{from{box-shadow:0 4px 20px rgba(0,0,0,.35)}to{box-shadow:0 4px 26px rgba(216,85,63,.5)}}
+
 /* ============ HUD ============ */
 #hud{
   position:fixed;top:18px;left:18px;right:18px;
@@ -361,7 +387,8 @@ input[type=range]{width:130px;accent-color:var(--lantern)}
   .toolBtn{flex:1 1 0;min-width:0;text-align:center;padding:9px 2px;font-size:10.5px;border-radius:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* Cast button floats clearly above the bar */
   #actionBtn{bottom:calc(70px + env(safe-area-inset-bottom,0px));padding:12px 30px}
-  #message{bottom:calc(140px + env(safe-area-inset-bottom,0px))}
+  #fightBar{bottom:calc(126px + env(safe-area-inset-bottom,0px))}
+  #message{bottom:calc(176px + env(safe-area-inset-bottom,0px))}
   /* panels leave room for the bar so their close button isn't hidden */
   .panel{padding-bottom:84px}
 }

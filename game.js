@@ -35,6 +35,7 @@
     stock: {},          // locId -> { v: 0..1, ts } fish-population health
     flags2: {},         // misc later flags (run catches, etc.)
     story: { seen: {}, ch: 0 }, // story progress
+    ghost: { caught: false, nearMiss: false, sighted: false, toldReady: false }, // the Gray Ghost chase
     trotline: { set: false, ts: 0 }, // opt-in idle line
     log: [],
     settings: { muted: false, volume: 0.6 },
@@ -44,7 +45,7 @@
      Everything but the transient `phase` is saved. Loading deep-merges
      onto defaults so old saves survive new fields in future versions. */
   const SAVE_FIELDS = ["locationId", "unlocked", "bucks", "equip", "stats",
-    "caught", "records", "legends", "flags", "flags2", "achievements", "bounties", "camp", "daily", "stock", "story", "trotline", "log", "settings"];
+    "caught", "records", "legends", "flags", "flags2", "achievements", "bounties", "camp", "daily", "stock", "story", "ghost", "trotline", "log", "settings"];
   let saveLocked = false; // true during reset, so nothing re-saves stale data
 
   function save() {
@@ -278,7 +279,11 @@
       const r = Math.random();
       const c = conditions();
       const runs = runHere(state.locationId);
-      if (runs.length && r < 0.35) setMsg(runs[0].report);
+      if (state.story.seen.thelegend && !state.ghost.caught && ghostConditions() && r < 0.5)
+        setMsg("The moon's pulled the water tight and you've fished it all. If the Gray Ghost ever shows… it's a night like this.");
+      else if (state.story.seen.thelegend && !state.ghost.caught && r < 0.12)
+        setMsg("Something big rolled out past the lights. Too big. You tell yourself it was a gator. You don't believe it.");
+      else if (runs.length && r < 0.35) setMsg(runs[0].report);
       else if (c.sol.feeding === "major" && r < 0.45) setMsg("The water just woke up — they're feeding hard right now.");
       else if (stockOf(state.locationId) < 0.6 && r < 0.5) setMsg("You've worked this spot hard lately. It'll bite better with a rest — try somewhere else.");
       else if (r < 0.62) setMsg(pick(loc().idle));
@@ -376,6 +381,7 @@
   function strike() {
     clearTimers();
     ripple(bobberPos.x, bobberPos.y);
+    if (ghostEligible() && Math.random() < GHOST_CHANCE) { ghostHook(); return; }
     if (Math.random() < junkChance()) { resolveJunk(); return; }
     const f = pickFish();
     const w = +rand(f.w[0], f.w[1]).toFixed(1);
@@ -446,7 +452,7 @@
   function startFight(f, w) {
     state.phase = "fighting";
     const p = FIGHT_PROFILES[fightStyle(refKey(f), f, w)] || FIGHT_PROFILES.mixed;
-    const target = fightTarget(w) * p.tm * (0.85 + Math.random() * 0.3); // per-catch variation
+    const target = fightTarget(w) * p.tm * (0.85 + Math.random() * 0.3) * (f.ghost ? 1.5 : 1); // ghost = epic
     fight = { f, w, prog: 0, target, surge: false, p };
     bobber.className = "bite";
     btn.textContent = "REEL!"; btn.classList.add("urgent");
@@ -508,6 +514,7 @@
   }
 
   function landFish() {
+    if (fight && fight.f.ghost) { ghostEnding(fight.f, fight.w); return; }
     const f = fight.f, w = fight.w;
     endFight();
     state.phase = "idle"; resetTackle();
@@ -585,7 +592,7 @@
     $("catchFlavor").textContent = flavor;
     $("catchCard").classList.add("show");
   }
-  $("catchClose").addEventListener("click", () => $("catchCard").classList.remove("show"));
+  $("catchClose").addEventListener("click", () => { $("catchCard").classList.remove("show"); maybePlayScene(); });
 
   /* ---------- PHOTO MODE ---------- */
   const PHOTO_W = 1080, PHOTO_H = 1350;
@@ -1192,7 +1199,7 @@
     const h = dhash(today);
     const tmpl = D.DAILY[h % D.DAILY.length];
     const span = (tmpl.max || tmpl.min || 1) - (tmpl.min || 0);
-    const roll = tmpl.min ? tmpl.min + (h >> 4) % (span + 1) : 1;
+    const roll = tmpl.min ? tmpl.min + (h >>> 4) % (span + 1) : 1;
     const d = { date: today, cid: tmpl.id, kind: tmpl.kind, group: tmpl.group || null,
       target: tmpl.kind === "weight" || tmpl.kind === "legendary" ? 1 : roll,
       minWeight: tmpl.kind === "weight" ? roll : 0,
@@ -1200,7 +1207,7 @@
       text: (tmpl.text || "").replace("{N}", roll).replace("{X}", roll),
       progress: 0, seen: [], done: false,
       streak, lastDay: today,
-      featured: D.LOCATIONS[(h >> 8) % D.LOCATIONS.length].id };
+      featured: D.LOCATIONS[(h >>> 8) % D.LOCATIONS.length].id };
     state.daily = d;
     save();
     dailyAnnounce = true;
@@ -1266,18 +1273,20 @@
   function checkStory() {
     const g = facade();
     for (const b of D.STORY) {
-      if (state.story.seen[b.id] || storyQueue.includes(b.id)) continue;
+      if (state.story.seen[b.id] || storyQueue.some(x => x.id === b.id)) continue;
       let ok = false; try { ok = b.check(g); } catch (e) {}
-      if (ok) storyQueue.push(b.id);
+      if (ok) storyQueue.push(b);
     }
+    if (typeof maybeTellReady === "function") maybeTellReady();
     maybePlayScene();
   }
+  function enqueueBeats(beats) { beats.forEach(b => { if (!storyQueue.some(x => x.id === b.id)) storyQueue.push(b); }); maybePlayScene(); }
   function maybePlayScene() {
     if (dlgActive || !storyQueue.length) return;
     if (state.phase !== "idle") return;                 // never interrupt a line in the water
     if ($("catchCard").classList.contains("show")) return;
     if (document.querySelector(".panel.open")) return;
-    playScene(D.STORY.find(b => b.id === storyQueue.shift()));
+    playScene(storyQueue.shift());
   }
   function playScene(b) {
     if (!b) return;
@@ -1308,6 +1317,63 @@
     setTimeout(maybePlayScene, 500); // chain any queued scenes
   }
   $("dialogue").addEventListener("click", dlgAdvance);
+
+  /* ---------- THE GRAY GHOST (endgame chase) ---------- */
+  const GHOST_CHANCE = 0.07; // per bite, once all conditions align
+  function allWatersFished() { return D.LOCATIONS.every(l => (state.stats.perLoc[l.id] || 0) > 0); }
+  function bigMoon() { const i = moonInfo(new Date()).illum; return i > 0.9 || i < 0.1; }
+  function ghostConditions() { return state.story.seen.thelegend && allWatersFished() && bigMoon(); }
+  function ghostEligible() { return !state.ghost.caught && ghostConditions(); }
+  function lineMaxed() { return state.equip.line >= D.EQUIPMENT.line.length - 1; }
+
+  function maybeTellReady() {
+    if (ghostEligible() && !state.ghost.toldReady && !state.ghost.sighted) {
+      state.ghost.toldReady = true; save();
+      enqueueBeats([D.GHOST.ready]);
+    }
+  }
+
+  function ghostHook() {
+    clearTimers();
+    state.ghost.sighted = true;
+    spawnSplash(bobberPos.x, bobberPos.y, 18, 40); screenShake(); hapt([0, 40, 60, 40]);
+    if (!lineMaxed()) { ghostNearMiss(); return; }
+    const g = D.L.grayghost;
+    const w = +rand(g.w[0], g.w[1]).toFixed(0);
+    startFight(g, w); // f.ghost flag drives epic length + landing into the ending
+  }
+
+  function ghostNearMiss() {
+    state.phase = "idle"; resetTackle();
+    state.ghost.nearMiss = true; save();
+    sfx("splash");
+    showCard("🐋", "the one that got away", "the Gray Ghost",
+      "you felt the whole bayou on the end of your line", "", D.GENERIC.breakoff[0], "junk");
+    setMsg("That was him. The line couldn't hold him.");
+    storyQueue.length = 0; // the near-miss takes the stage
+    enqueueBeats([D.GHOST.nearMiss]);
+    updateStats();
+  }
+
+  function ghostEnding(f, w) {
+    endFight();
+    state.phase = "idle"; resetTackle();
+    spawnSplash(bobberPos.x, bobberPos.y, 26, 46); screenShake(); hapt([0, 50, 80, 50, 80]);
+    const key = "grayghost";
+    state.ghost.caught = true;
+    state.stats.catches++;
+    recordCatch(f, w, key);
+    state.legends[key] = true;
+    const reward = 5000;
+    state.bucks += reward;
+    sfx("chime"); setTimeout(() => sfx("chime"), 300);
+    addLog({ emoji: "🐋", name: f.name, meta: w + " lb · released", pb: false, legend: true });
+    showCard("🐋", "legendary", f.name, w + " lb · met & released",
+      "+" + reward + " ₿ · the bayou settles a debt", pick(f.flavor), "legendary", key);
+    updateStats(); save(); checkAchievements();
+    storyQueue.length = 0; // nothing precedes the finale
+    enqueueBeats(D.GHOST.finale);
+  }
 
   /* ---------- THE CAMP + TROPHY WALL ---------- */
   function renderCamp() {
@@ -1376,6 +1442,7 @@
     l.species.forEach(s => (REF_LOCS[s.ref] = REF_LOCS[s.ref] || []).push(l.name));
     (l.legendaries || []).forEach(s => (REF_LOCS[s.ref] = REF_LOCS[s.ref] || []).push(l.name));
   });
+  REF_LOCS.grayghost = ["every water in the basin, they say"]; // the Ghost belongs to no one place
   const GUIDE_FISH = Object.keys(D.S).filter(k => REF_LOCS[k]);
   const GUIDE_LEGENDS = Object.keys(D.L).filter(k => REF_LOCS[k]);
 
@@ -1429,7 +1496,7 @@
     saltlife: "🌊", guide20: "📖", fullbox: "🧰",
     rainmaker: "🌧️", frontrunner: "🌩️", trotline: "🪝",
     favor: "🤝", landing: "⛪", homestead: "🏕️", trophies: "🏆",
-    daily1: "📅", streak7: "🔥", running: "🐟",
+    daily1: "📅", streak7: "🔥", running: "🐟", grayghost: "🐋",
   };
 
   function recordSpeciesHere(key) {
@@ -1449,7 +1516,7 @@
   function facade() {
     return {
       stats: state.stats, flags: state.flags, flags2: state.flags2, equip: state.equip,
-      caught: state.caught, bucks: state.bucks, camp: state.camp, daily: state.daily,
+      caught: state.caught, bucks: state.bucks, camp: state.camp, daily: state.daily, ghost: state.ghost,
       trophyCount: () => Object.keys(state.records).filter(k => state.records[k].max > 0).length,
       totalCatches: () => state.stats.catches,
       junkCount: k => state.stats.junkKinds[k] || 0,
@@ -1601,7 +1668,7 @@
 
   /* ---------- INPUT ---------- */
   function act(x, y) {
-    if ($("catchCard").classList.contains("show")) { $("catchCard").classList.remove("show"); return; }
+    if ($("catchCard").classList.contains("show")) { $("catchCard").classList.remove("show"); maybePlayScene(); return; }
     if (state.phase === "idle") cast(x, y);
     else if (state.phase === "bite") strike();
     // fighting is driven by press-and-hold (pointer handlers below), not click

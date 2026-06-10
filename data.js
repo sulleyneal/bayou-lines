@@ -319,6 +319,45 @@
         "The whole marsh seems to go quiet for him. You'll understand when you see it.",
       ],
     },
+    // the white whale — not bound to any water; only reachable through the chase (S5)
+    grayghost: {
+      name: "the Gray Ghost", emoji: "🐋", w: [62.0, 96.0], value: 0, cls: "legendary",
+      legendary: true, ghost: true,
+      flavor: [
+        "Older than the name of the parish. You held it a moment in the moonlight, and you let it go.",
+        "Not a catch. A meeting. Some things you don't keep — you just get to say you stood with one.",
+        "Pale as river fog, scarred by a hundred broken lines. It looked at you like it knew your grandfather.",
+      ],
+    },
+  };
+
+  /* ============================================================
+     GHOST — the Gray Ghost chase scenes (played manually, not by the
+     normal story trigger). The endgame payoff for learning every water.
+     ============================================================ */
+  const GHOST = {
+    ready: { id: "ghost_ready", who: "boudreaux", ch: 4, title: "A Night Like This", lines: [
+      "You feel that? Moon's pulled tight, and you've fished every drop of water from the pond to the gulf. Learned it all.",
+      "If the Gray Ghost is ever gonna show himself, it's a night exactly like this one. I got chills just sayin' it.",
+      "Heavy line, son. The heaviest they make. He's parted every other kind. Now go keep a line wet, and… good luck. Lord, good luck." ] },
+    nearMiss: { id: "ghost_nearmiss", who: "boudreaux", ch: 4, title: "You Had Him", lines: [
+      "You felt that, didn't you. That wasn't a fish. That was THE fish. The whole rod doubled and the water went to boil.",
+      "And then your line gave. They always give. He's stronger than anything you can buy at my table, that's the hell of it.",
+      "Eighty-pound braid, son. The offshore stuff. Nothing less holds him. Get it, and get back out here on the next big moon." ] },
+    finale: [
+      { id: "ghost_win1", who: "boudreaux", ch: 4, title: "The Gray Ghost", lines: [
+        "…I don't believe it. Fifty years on this water and I'm watchin' it with my own two eyes.",
+        "You held him. You actually HELD him. Look at the size — look at the SCARS on him. Every one a line he broke. Every one a story like mine.",
+        "Let him go, son. Quick, while the moon's still on him. He don't belong to anybody. Never did." ] },
+      { id: "ghost_win2", who: "amelia", ch: 4, title: "Don't Name Him", lines: [
+        "I'm not gonna name this one. You don't name the Gray Ghost. He's already got every name there is.",
+        "Did you see his eye? Mr. Boudreaux's cryin' and tryin' to act like he ain't. Miss Darlene already started the fryer for everybody.",
+        "Thank you for lettin' me see it. I'm gonna tell my grandkids I was here the night you stood with the Ghost." ] },
+      { id: "ghost_win3", who: "darlene", ch: 4, title: "Humble, Out Here", lines: [
+        "Mama was right. Good luck just to see him. And you let him swim off easy, no fuss, no braggin'.",
+        "That's the whole secret, baby. The bayou gives the most to the ones who'd give it right back.",
+        "Now come eat. The whole landing's down at the water. Tonight, the fish fry's on the house — for the one who met the Ghost and let him go." ] },
+    ],
   };
 
   /* ============================================================
@@ -686,6 +725,7 @@
     { id: "daily1", name: "Showed Up", desc: "Finish a daily challenge.", check: g => (g.stats.dailiesDone || 0) >= 1 },
     { id: "streak7", name: "Regular Out Here", desc: "Keep a 7-day streak going.", check: g => (g.daily.streak || 0) >= 7 },
     { id: "running", name: "Right Place, Right Time", desc: "Land a fish during a seasonal run.", check: g => g.flags2 && g.flags2.runCatch },
+    { id: "grayghost", name: "The Gray Ghost", desc: "Meet the legend the whole bayou whispers about.", check: g => g.ghost && g.ghost.caught },
     { id: "guide20", name: "Field Notes", desc: "Log 20 different species in the Field Guide.", check: g => g.speciesCaughtCount() >= 20 },
     { id: "fullbox", name: "The Whole Tackle Box", desc: "Catch at least one of every species in the game.", check: g => g.speciesCaughtCount() >= g.speciesTotalCount() },
   ];
@@ -860,5 +900,5 @@
   ];
 
   window.DATA = { CONFIG, PHASES, GENERIC, S, L, JUNK, EQUIPMENT, LOCATIONS, ACHIEVEMENTS,
-    WEATHER, SEASONS, CHARACTERS, BOUNTY_TEMPLATES, CAMP, DAILY, RUNS, STORY };
+    WEATHER, SEASONS, CHARACTERS, BOUNTY_TEMPLATES, CAMP, DAILY, RUNS, STORY, GHOST };
 })();

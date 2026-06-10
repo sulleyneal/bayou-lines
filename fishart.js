@@ -64,6 +64,8 @@
     grandfather: { arch: "gar", back: "#4f5b3c", belly: "#ada277", fin: "#3a4330", pattern: "spots", pat: "#222818", legend: true, big: true },
     gator:       { arch: "gar", back: "#3f4a36", belly: "#8c8a64", fin: "#2f3829", pattern: "none", legend: true, big: true },
     bullred:     { arch: "redfish", back: "#c87f33", belly: "#f0dcae", fin: "#a5611f", pattern: "none", tailEye: "#1c1c1c", legend: true, big: true },
+    // the white whale: pale, ancient, scarred, faintly luminous
+    grayghost:   { arch: "gar", back: "#8a93a0", belly: "#e8ecee", fin: "#6b7682", pattern: "mottle", pat: "#aab2bc", legend: true, big: true },
   };
 
   const VB_W = 130, VB_H = 70, MY = 35;

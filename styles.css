@@ -377,7 +377,8 @@ h1 em{font-style:italic;font-weight:400;color:var(--lantern)}
 .panel{
   position:fixed;right:0;top:0;bottom:0;width:min(420px,94vw);
   background:rgba(8,22,20,.95);border-left:1px solid var(--ui-border);
-  z-index:50;padding:26px 24px 40px;overflow-y:auto;
+  z-index:50;overflow-y:auto;
+  padding:calc(26px + env(safe-area-inset-top,0px)) 24px calc(40px + env(safe-area-inset-bottom,0px));
   transform:translateX(105%);transition:transform .4s cubic-bezier(.22,1,.36,1);
   backdrop-filter:blur(12px);
 }
@@ -385,8 +386,9 @@ h1 em{font-style:italic;font-weight:400;color:var(--lantern)}
 .panel h2{font-family:'Fraunces',serif;font-weight:900;font-size:22px;color:var(--lantern);margin-bottom:4px}
 .panel .p-sub{font-size:11px;color:var(--cream-dim);margin-bottom:20px;line-height:1.6}
 .panelClose{
-  position:absolute;top:22px;right:22px;background:none;border:none;
-  color:var(--cream-dim);font-size:20px;cursor:pointer;font-family:inherit;z-index:2;
+  position:absolute;top:calc(22px + env(safe-area-inset-top,0px));right:22px;background:none;border:none;
+  color:var(--cream-dim);font-size:26px;cursor:pointer;font-family:inherit;z-index:2;
+  width:40px;height:40px;line-height:1;  /* bigger tap target */
 }
 .panelClose:hover{color:var(--lantern)}
 
@@ -565,6 +567,6 @@ input[type=range]{width:130px;accent-color:var(--lantern)}
   #actionBtn{bottom:calc(70px + env(safe-area-inset-bottom,0px));padding:12px 30px}
   #fightBar{bottom:calc(126px + env(safe-area-inset-bottom,0px))}
   #message{bottom:calc(176px + env(safe-area-inset-bottom,0px))}
-  /* panels leave room for the bar so their close button isn't hidden */
-  .panel{padding-bottom:84px}
+  /* panels leave room for the bottom bar + home indicator */
+  .panel{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 }

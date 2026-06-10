@@ -1403,6 +1403,8 @@
     document.addEventListener(ev, ensureAudio, { once: true }));
 
   scene.addEventListener("click", e => {
+    // if a panel is open, a tap on the scene dismisses it (escape hatch)
+    if (document.querySelector(".panel.open")) { closeAllPanels(); return; }
     const wr = water.getBoundingClientRect();
     if (state.phase === "idle" && e.clientY < wr.top) {
       setMsg("That's the sky. Ambitious, but the fish are lower.");

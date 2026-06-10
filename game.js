@@ -34,6 +34,7 @@
     daily: { date: "", streak: 0, lastDay: "" }, // daily challenge + streak
     stock: {},          // locId -> { v: 0..1, ts } fish-population health
     flags2: {},         // misc later flags (run catches, etc.)
+    story: { seen: {}, ch: 0 }, // story progress
     trotline: { set: false, ts: 0 }, // opt-in idle line
     log: [],
     settings: { muted: false, volume: 0.6 },
@@ -43,7 +44,7 @@
      Everything but the transient `phase` is saved. Loading deep-merges
      onto defaults so old saves survive new fields in future versions. */
   const SAVE_FIELDS = ["locationId", "unlocked", "bucks", "equip", "stats",
-    "caught", "records", "legends", "flags", "flags2", "achievements", "bounties", "camp", "daily", "stock", "trotline", "log", "settings"];
+    "caught", "records", "legends", "flags", "flags2", "achievements", "bounties", "camp", "daily", "stock", "story", "trotline", "log", "settings"];
   let saveLocked = false; // true during reset, so nothing re-saves stale data
 
   function save() {
@@ -387,6 +388,7 @@
     save();
     checkAchievements();
     setMsg("Back to the water whenever you're ready. No rush. Genuinely none.");
+    checkStory();
   }
 
   function resolveJunk() {
@@ -1077,6 +1079,7 @@
     closePanel("travelPanel");
     setMsg(fresh ? `Permit secured. Welcome to <b>${l.name}</b>.` : `Now fishing <b>${l.name}</b>.`,
       pick(l.idle));
+    checkStory();
   }
 
   /* ---------- THE LANDING (bounties) ----------
@@ -1141,7 +1144,7 @@
       state.bounties = state.bounties.filter(x => x.uid !== b.uid);
     }
     ensureBounties();
-    updateStats(); save(); checkAchievements();
+    updateStats(); save(); checkAchievements(); checkStory();
     setTimeout(() => sfx("chime"), 120);
   }
 
@@ -1256,6 +1259,56 @@
       </div>`;
   }
 
+  /* ---------- STORY (scenes with the locals) ---------- */
+  const storyQueue = [];
+  let dlgActive = false, dlgBeat = null, dlgLine = 0;
+
+  function checkStory() {
+    const g = facade();
+    for (const b of D.STORY) {
+      if (state.story.seen[b.id] || storyQueue.includes(b.id)) continue;
+      let ok = false; try { ok = b.check(g); } catch (e) {}
+      if (ok) storyQueue.push(b.id);
+    }
+    maybePlayScene();
+  }
+  function maybePlayScene() {
+    if (dlgActive || !storyQueue.length) return;
+    if (state.phase !== "idle") return;                 // never interrupt a line in the water
+    if ($("catchCard").classList.contains("show")) return;
+    if (document.querySelector(".panel.open")) return;
+    playScene(D.STORY.find(b => b.id === storyQueue.shift()));
+  }
+  function playScene(b) {
+    if (!b) return;
+    dlgActive = true; dlgBeat = b; dlgLine = 0;
+    const c = D.CHARACTERS[b.who];
+    $("dlgFace").textContent = c.emoji;
+    $("dlgName").textContent = c.name;
+    $("dlgTitle").textContent = (b.ch ? "Chapter " + b.ch + " · " : "") + b.title;
+    renderDlgLine();
+    $("dialogue").classList.add("show");
+  }
+  function renderDlgLine() {
+    $("dlgText").textContent = dlgBeat.lines[dlgLine];
+    $("dlgNext").textContent = dlgLine >= dlgBeat.lines.length - 1 ? "✓ Back to the water" : "Go on…";
+  }
+  function dlgAdvance() {
+    if (!dlgActive) return;
+    dlgLine++;
+    if (dlgLine >= dlgBeat.lines.length) { finishScene(); return; }
+    renderDlgLine();
+  }
+  function finishScene() {
+    state.story.seen[dlgBeat.id] = true;
+    if (dlgBeat.ch) state.story.ch = Math.max(state.story.ch || 0, dlgBeat.ch);
+    $("dialogue").classList.remove("show");
+    dlgActive = false; dlgBeat = null;
+    save();
+    setTimeout(maybePlayScene, 500); // chain any queued scenes
+  }
+  $("dialogue").addEventListener("click", dlgAdvance);
+
   /* ---------- THE CAMP + TROPHY WALL ---------- */
   function renderCamp() {
     const c = state.camp;
@@ -1307,7 +1360,7 @@
     const next = D.CAMP.tiers[state.camp.tier + 1];
     if (!next || state.bucks < next.price) return;
     state.bucks -= next.price; state.camp.tier++;
-    sfx("chime"); save(); updateStats(); renderCamp(); checkAchievements();
+    sfx("chime"); save(); updateStats(); renderCamp(); checkAchievements(); checkStory();
   }
   function buyDecor(id) {
     const d = D.CAMP.decor.find(x => x.id === id);
@@ -1613,6 +1666,7 @@
   renderLog();
   checkTrotline(); // welcome-back gift if a line was soaking
   if (dailyAnnounce) setMsg(`New day on the bayou. <b>Today:</b> ${state.daily.text.toLowerCase()}.`, "tap the water whenever");
+  setTimeout(checkStory, 900); // opening scene / any pending beats once settled
   // A returning player should land exactly where they left off.
   if (state.stats.catches || state.stats.junk) {
     setMsg("Right where you left it. The fish kept your spot warm.",

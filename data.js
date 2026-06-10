@@ -812,6 +812,53 @@
     { id: "specwinter", group: ["speck"], locs: ["venice"], months: [11, 0, 1], label: "the speckled trout bite", report: "Cold water has the specks bunched up tight under the diving birds." },
   ];
 
+  /* ============================================================
+     STORY — a low-pressure spine carried by the locals. Each beat
+     plays once when its check(g) passes (next time you're idle).
+     The arc quietly seeds the Gray Ghost — the white-whale legend
+     you'll chase in the endgame.
+     ============================================================ */
+  const STORY = [
+    { id: "welcome", who: "boudreaux", ch: 1, title: "A Place to Sit", check: () => true, lines: [
+      "Well, look who found the landing. Boudreaux. I run the bait shop — that cooler and that folding table yonder.",
+      "Ain't much to it out here. You cast, you wait, you visit. The fish'll come or they won't. Either way the evening's free.",
+      "Go on, wet a line. I'll be here. I'm always here." ] },
+    { id: "firstfish", who: "amelia", ch: 1, title: "Amelia Names It", check: g => g.totalCatches() >= 1, lines: [
+      "You caught one! You caught one! Lemme see — oh, he's HANDSOME. I'm gonna call him Gerald.",
+      "I name all of 'em. Mr. Boudreaux says that's silly but Mr. Boudreaux named his truck, so.",
+      "Catch more, okay? I'm runnin' out of names and I got a whole list." ] },
+    { id: "regular", who: "boudreaux", ch: 1, title: "Good for Business", check: g => g.totalCatches() >= 6, lines: [
+      "You been out here enough now, folks are startin' to call you a regular. That's a compliment, mostly.",
+      "Truth told, the shop's been slow. Big-box place out on the highway sells bait next to the motor oil. Hard to compete with cheap.",
+      "But you keep comin' round and buyin' the good stuff. Keeps the lights on a little longer. I 'preciate it. I do." ] },
+    { id: "newwater", who: "tee", ch: 2, title: "Tee-Claude Has Opinions", check: g => g.unlockedCount() >= 2, lines: [
+      "So you the one been catchin' fish two lakes over. Big deal. I caught a eight-pounder when I was NINE.",
+      "Name's Tee-Claude. I'm the best angler at this landing and everybody knows it, especially me.",
+      "You wanna race? Not a real race. Just… see who catches the better fish. I already won, but you can try." ] },
+    { id: "fries", who: "darlene", ch: 2, title: "Miss Darlene's Fridays", check: g => (g.stats.bountiesDone || 0) >= 1, lines: [
+      "Baby, that mess of fish you brought? That's Friday handled. Whole landing eats when you bring it in like that.",
+      "I been fryin' fish for these people thirty years. Cornmeal, hot grease, a little cayenne. That's the whole gospel.",
+      "You come hungry Friday, you hear? You earned a plate. Bring that no-account Tee-Claude too. He eats free, struggle as he is." ] },
+    { id: "campup", who: "boudreaux", ch: 2, title: "Your Own Spot", check: g => g.camp.tier >= 1, lines: [
+      "Heard you fixed up a little spot on the water. Dock and everything. That's how it starts, you know.",
+      "Man gets a dock, next thing he's got a chair, then a cabin, then he's the one tellin' the stories.",
+      "You're puttin' down roots out here. The bayou notices that kinda thing. It'll be good to you for it." ] },
+    { id: "firstlegend", who: "amelia", ch: 3, title: "A Real Legend", check: g => g.legendCount() >= 1, lines: [
+      "You caught a FAMOUS one! The kind that's got a NAME already, not just a name I gave it!",
+      "Mr. Boudreaux went quiet when I told him. He gets quiet when it's somethin' real.",
+      "He said… he said if you can catch THAT, maybe you oughta hear about the Gray Ghost. He wouldn't say more. He looked spooked." ] },
+    { id: "thelegend", who: "boudreaux", ch: 3, title: "The Gray Ghost", check: g => g.unlockedCount() >= 4, lines: [
+      "Alright. You earned the story, so sit. Pour somethin'. This one's old.",
+      "They call it the Gray Ghost. Big fish — biggest anybody's ever raised — and nobody agrees what it even IS. Cat, gar, somethin' older.",
+      "Every water from the pond to the gulf, somebody's hooked it once. Felt the whole rod bend double, heard the drag scream, and then… nothin'. Cut line. Every time.",
+      "My daddy lost it on the D'Arbonne in '71. I lost it myself, twice. It don't get caught. It gets ENCOUNTERED.",
+      "But you… you fish different. So I'll tell you what the old-timers told me: it shows for them that learn the water. All of it. Keep at it, and maybe it'll show for you." ] },
+    { id: "deeper", who: "darlene", ch: 3, title: "What Darlene Knows", check: g => g.unlockedCount() >= 6, lines: [
+      "Boudreaux told you about the Ghost, huh. I can see it on you. Gets in your head, that story.",
+      "My mama swore it only showed on the big moons. Full and new, when the water's pulled tight and the whole bayou holds its breath.",
+      "She also swore it's good luck just to see it. Bad luck to brag about it. So if you find it, baby — you be humble out there." ] },
+  ];
+
   window.DATA = { CONFIG, PHASES, GENERIC, S, L, JUNK, EQUIPMENT, LOCATIONS, ACHIEVEMENTS,
-    WEATHER, SEASONS, CHARACTERS, BOUNTY_TEMPLATES, CAMP, DAILY, RUNS };
+    WEATHER, SEASONS, CHARACTERS, BOUNTY_TEMPLATES, CAMP, DAILY, RUNS, STORY };
 })();

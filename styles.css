@@ -544,6 +544,14 @@ input[type=range]{width:130px;accent-color:var(--lantern)}
 }
 .dangerBtn:hover{background:rgba(201,111,61,.12)}
 
+/* ============ STORY JOURNAL ============ */
+.journalRow{display:flex;gap:12px;align-items:center;padding:11px 12px;border-radius:12px;margin-bottom:8px;
+  border:1px solid rgba(232,193,112,.14);background:rgba(232,193,112,.03);cursor:pointer;transition:background .15s}
+.journalRow:hover{background:rgba(232,193,112,.09)}
+.jr-face{font-size:24px;flex-shrink:0}
+.jr-title{font-size:13px;color:var(--cream)}
+.jr-who{font-size:10.5px;color:var(--cream-dim);margin-top:2px}
+
 /* ============ DIALOGUE (story scenes) ============ */
 #dialogue{
   position:fixed;inset:0;z-index:65;display:none;align-items:flex-end;justify-content:center;

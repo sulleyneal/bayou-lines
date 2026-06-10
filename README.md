@@ -22,6 +22,15 @@ landing. There are no timers that punish and no way to lose. It's a porch.
   compound, decorate, and hang your trophy wall on.
 - **Daily challenges** — a seeded challenge each day, a login streak, and
   a featured "hot bite" location that pays extra.
+- **A living world** — a real-date moon phase (drawn in the sky), tides on
+  the coast, solunar feeding windows, fish populations that recover when
+  rested, and seasonal runs that surge the right fish at the right time.
+- **A story** — a low-pressure spine carried by the landing regulars,
+  building to the Gray Ghost: a white-whale legend you chase across every
+  water once the moon and the conditions are right. There's an ending.
+- **An adaptive soundscape** — layered generative ambience (water, cicadas
+  by day, crickets and frogs at night, owls, gulls, distant thunder) over a
+  procedural music bed that shifts by time, place, and weather.
 - **Nine locations** from the Neighborhood Pond to Grand Isle / Venice,
   each with its own water, fish, junk, palette, and idle flavor.
 - **Economy & tackle shop** — four upgrade tracks (rod, line, lure, boat)

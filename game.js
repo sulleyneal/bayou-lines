@@ -1318,6 +1318,31 @@
   }
   $("dialogue").addEventListener("click", dlgAdvance);
 
+  // all narrative beats (story + the Ghost scenes), for the journal
+  const ALL_BEATS = D.STORY.concat([D.GHOST.ready, D.GHOST.nearMiss], D.GHOST.finale);
+  function renderJournal() {
+    const seen = ALL_BEATS.filter(b => state.story.seen[b.id]);
+    if (!seen.length) {
+      $("journalBody").innerHTML = `<div id="trophyEmpty">No stories yet. Keep fishing — the regulars will have things to say.</div>`;
+      return;
+    }
+    const byCh = {};
+    seen.forEach(b => { (byCh[b.ch || 1] = byCh[b.ch || 1] || []).push(b); });
+    let html = "";
+    Object.keys(byCh).sort().forEach(ch => {
+      html += `<div class="sectionLabel">Chapter ${ch}</div>`;
+      html += byCh[ch].map(b => {
+        const c = D.CHARACTERS[b.who];
+        return `<div class="journalRow" data-beat="${b.id}">
+            <span class="jr-face">${c.emoji}</span>
+            <div><div class="jr-title">${b.title}</div><div class="jr-who">${c.name}</div></div></div>`;
+      }).join("");
+    });
+    $("journalBody").innerHTML = html;
+    $("journalBody").querySelectorAll("[data-beat]").forEach(el =>
+      el.addEventListener("click", () => { const b = ALL_BEATS.find(x => x.id === el.dataset.beat); closePanel("journalPanel"); if (b) playScene(b); }));
+  }
+
   /* ---------- THE GRAY GHOST (endgame chase) ---------- */
   const GHOST_CHANCE = 0.07; // per bite, once all conditions align
   function allWatersFished() { return D.LOCATIONS.every(l => (state.stats.perLoc[l.id] || 0) > 0); }
@@ -1634,6 +1659,7 @@
   $("guideBtn").addEventListener("click", () => { renderGuide(); openPanel("guidePanel"); });
   $("jobsBtn").addEventListener("click", () => { renderBoard(); openPanel("jobsPanel"); });
   $("campBtn").addEventListener("click", () => { renderCamp(); openPanel("campPanel"); closeMore(); });
+  $("journalBtn").addEventListener("click", () => { renderJournal(); openPanel("journalPanel"); closeMore(); });
 
   // the "More" overflow menu
   function closeMore() { $("moreMenu").classList.remove("open"); }

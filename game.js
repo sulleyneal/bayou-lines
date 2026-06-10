@@ -24,6 +24,7 @@
       locSpecies: {},   // locId -> { ref: true }  (for As-Built)
     },
     caught: {},         // ref -> true (species + legendaries ever landed)
+    records: {},        // ref -> { max, count, firstLoc, lastTs }  (Field Guide)
     legends: {},        // legendary ref -> true
     flags: {},          // nightCat, goldenBass, asBuilt, firstSalt
     achievements: [],   // unlocked ids
@@ -35,7 +36,7 @@
      Everything but the transient `phase` is saved. Loading deep-merges
      onto defaults so old saves survive new fields in future versions. */
   const SAVE_FIELDS = ["locationId", "unlocked", "bucks", "equip", "stats",
-    "caught", "legends", "flags", "achievements", "log", "settings"];
+    "caught", "records", "legends", "flags", "achievements", "log", "settings"];
   let saveLocked = false; // true during reset, so nothing re-saves stale data
 
   function save() {
@@ -306,6 +307,10 @@
       state.stats.perLoc[state.locationId] = (state.stats.perLoc[state.locationId] || 0) + 1;
       state.stats.species[key] = (state.stats.species[key] || 0) + 1;
       state.caught[key] = true;
+      const rec = state.records[key] || (state.records[key] = { max: 0, count: 0, firstLoc: state.locationId, lastTs: 0 });
+      rec.count++;
+      rec.lastTs = Date.now();
+      if (w > rec.max) rec.max = w;
       if (f.legendary) state.legends[key] = true;
       recordSpeciesHere(key);
       noteFlags(f, key);

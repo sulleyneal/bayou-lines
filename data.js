@@ -679,5 +679,75 @@
     { id: "fullbox", name: "The Whole Tackle Box", desc: "Catch at least one of every species in the game.", check: g => g.speciesCaughtCount() >= g.speciesTotalCount() },
   ];
 
-  window.DATA = { CONFIG, PHASES, GENERIC, S, L, JUNK, EQUIPMENT, LOCATIONS, ACHIEVEMENTS };
+  /* ============================================================
+     WEATHER — rolls every so often. biteSpeed < 1 = faster bites,
+     rarityBoost nudges the table toward rarer fish. `fx` keys a
+     scene overlay. The pre-front bite is the classic local truth.
+     ============================================================ */
+  const WEATHER = [
+    { id: "clear",    label: "clear skies",        weight: 30, biteSpeed: 1.00, rarityBoost: 0.00, fx: null,       report: "Bluebird sky. Pretty as a postcard, and the fish get a little shy under it." },
+    { id: "partly",   label: "partly cloudy",      weight: 24, biteSpeed: 0.95, rarityBoost: 0.03, fx: "clouds",   report: "Clouds drifting through. Comfortable water, steady bite. A good day to be out." },
+    { id: "overcast", label: "overcast",           weight: 16, biteSpeed: 0.86, rarityBoost: 0.06, fx: "overcast", report: "Gray and soft. Fish lose their caution under a low ceiling — keep a line wet." },
+    { id: "fog",      label: "morning fog",        weight: 9,  biteSpeed: 0.82, rarityBoost: 0.06, fx: "fog",      report: "Fog sitting on the water like it pays rent. Eerie, quiet, and excellent." },
+    { id: "rain",     label: "light rain",         weight: 10, biteSpeed: 0.78, rarityBoost: 0.09, fx: "rain",     report: "A warm rain dimpling the surface. They feed hard in this — you might get wet, worth it." },
+    { id: "front",    label: "a front moving in",  weight: 6,  biteSpeed: 0.62, rarityBoost: 0.15, fx: "front",    report: "Pressure's dropping ahead of a front. The bite is ON. Whatever you were doing, do this instead." },
+  ];
+
+  /* ============================================================
+     SEASONS — tracks your real-world season, so the marsh matches
+     your window. Each shifts scenery tint and favors certain fish.
+     months are 0-indexed (Jan = 0).
+     ============================================================ */
+  const SEASONS = [
+    { id: "spring", label: "spring", months: [2, 3, 4], tint: "hue-rotate(-6deg) saturate(1.06)",
+      bias: { largemouth: 1.3, trophybass: 1.3, crappie: 1.3, blackcrappie: 1.3, smallbass: 1.2 },
+      report: "Spring. Fish are shallow and spawning-minded — bass and crappie are players right now." },
+    { id: "summer", label: "summer", months: [5, 6, 7], tint: "saturate(1.08) brightness(1.02)",
+      bias: { channelcat: 1.3, bluecat: 1.3, flathead: 1.3, bowfin: 1.2, redfish: 1.2 },
+      report: "High summer. Catfish own the warm nights; everything else hugs the shade and waits for dark." },
+    { id: "fall", label: "fall", months: [8, 9, 10], tint: "hue-rotate(9deg) saturate(1.04)",
+      bias: { largemouth: 1.25, whitebass: 1.3, striper: 1.3, crappie: 1.2, speck: 1.2 },
+      report: "Fall feed-up. Cooling water, schooling bait, and fish trying to fatten before winter. Prime time." },
+    { id: "winter", label: "winter", months: [11, 0, 1], tint: "hue-rotate(-12deg) saturate(.92) brightness(.98)",
+      bias: { crappie: 1.4, blackcrappie: 1.4 },
+      report: "Winter. The bite slows and goes deep, but the crappie stack up thick and willing." },
+  ];
+
+  /* ============================================================
+     CHARACTERS — the regulars at the landing. They post bounties
+     and say their piece. Pure flavor + a face for the bounty board.
+     ============================================================ */
+  const CHARACTERS = {
+    amelia:    { name: "Amelia June",  emoji: "👧", blurb: "Names every fish she sees. Has strong opinions on all of them." },
+    boudreaux: { name: "Mr. Boudreaux",emoji: "🧓", blurb: "Runs the bait shop out of a cooler and a folding table. Knows the water cold." },
+    darlene:   { name: "Miss Darlene", emoji: "👩", blurb: "Fries fish for the whole landing on Fridays. Pays in compliments and cash." },
+    tee:       { name: "Tee-Claude",   emoji: "🧢", blurb: "Eleven years old, out-fishes everyone, and will not let you forget it." },
+  };
+
+  /* ============================================================
+     BOUNTY TEMPLATES — the game instantiates concrete bounties from
+     these (rolling a target in [min,max] and a reward). kinds:
+       species  — catch N of a species group
+       weight   — land one fish over X lb
+       junk     — haul N junk
+       variety  — catch N different species (this outing)
+       legendary— land any named legendary
+     ============================================================ */
+  const BOUNTY_TEMPLATES = [
+    { id: "mess",    giver: "darlene",   kind: "species", group: ["crappie", "blackcrappie"], noun: "sac-au-lait", min: 5, max: 10, perReward: 9,
+      flavor: "Friday fry's coming and I'm short. Bring me a mess of sac-au-lait, cher — {N} of 'em ought to do." },
+    { id: "catfry",  giver: "darlene",   kind: "species", group: ["channelcat", "bluecat", "flathead"], noun: "catfish", min: 3, max: 6, perReward: 16,
+      flavor: "Whiskers for the grease this week. {N} catfish, any size, and I'll know if you cheat." },
+    { id: "bigun",   giver: "tee",       kind: "weight", min: 4, max: 9, reward: 140,
+      flavor: "Betcha can't catch one bigger'n my cousin's. {X} pounds. Go on, I'll wait. (He won't wait.)" },
+    { id: "cleanup", giver: "boudreaux", kind: "junk", min: 5, max: 12, perReward: 6,
+      flavor: "Parish pays a little to pull junk out the water. {N} pieces and I'll square you up." },
+    { id: "namer",   giver: "amelia",    kind: "variety", min: 3, max: 5, perReward: 22,
+      flavor: "I want to name some NEW ones! Bring me {N} different kinds — any kinds, I'm not picky, I just like naming." },
+    { id: "story",   giver: "boudreaux", kind: "legendary", reward: 350,
+      flavor: "Word is there's a big old one in this water. Bring me a story worth telling and I'll make it worth your while." },
+  ];
+
+  window.DATA = { CONFIG, PHASES, GENERIC, S, L, JUNK, EQUIPMENT, LOCATIONS, ACHIEVEMENTS,
+    WEATHER, SEASONS, CHARACTERS, BOUNTY_TEMPLATES };
 })();

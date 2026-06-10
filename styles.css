@@ -237,7 +237,10 @@ h1 em{font-style:italic;font-weight:400;color:var(--lantern)}
   box-shadow:0 18px 60px rgba(0,0,0,.55);
 }
 #catchCard.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
-#catchEmoji{font-size:56px;display:block;margin-bottom:10px}
+#catchEmoji{font-size:56px;display:block;margin-bottom:10px;min-height:56px}
+#catchEmoji .fishart{display:inline-block;filter:drop-shadow(0 6px 10px rgba(0,0,0,.4))}
+@keyframes fishIn{from{opacity:0;transform:translateY(8px) scale(.92)}to{opacity:1;transform:none}}
+#catchCard.show #catchEmoji .fishart{animation:fishIn .45s cubic-bezier(.22,1,.36,1)}
 #catchName{font-family:'Fraunces',serif;font-weight:900;font-size:26px;color:var(--lantern);margin-bottom:4px}
 #catchDetail{font-size:12px;color:var(--cream-dim);margin-bottom:14px}
 #catchValue{font-size:12px;color:var(--good);margin-bottom:12px;letter-spacing:.04em}
@@ -349,8 +352,9 @@ h1 em{font-style:italic;font-weight:400;color:var(--lantern)}
 }
 .gCard.logged{border-color:rgba(232,193,112,.34);background:rgba(232,193,112,.06)}
 .gCard.legend.logged{border-color:var(--lantern);background:linear-gradient(90deg,rgba(232,193,112,.1),rgba(216,85,63,.07))}
-.g-emoji{font-size:26px;line-height:1;flex-shrink:0;width:30px;text-align:center}
-.gCard:not(.logged) .g-emoji{filter:grayscale(1) brightness(0) opacity(.45)}
+.g-emoji{font-size:26px;line-height:1;flex-shrink:0;width:58px;text-align:center;display:flex;align-items:center;justify-content:center}
+.g-emoji .fishart{display:block}
+.gCard:not(.logged) .g-emoji{filter:brightness(0) opacity(.4)}     /* unlogged = inked silhouette */
 .g-body{flex:1;min-width:0}
 .g-name{font-size:13px;color:var(--cream);font-weight:500}
 .gCard:not(.logged) .g-name{color:var(--cream-dim);letter-spacing:.18em}

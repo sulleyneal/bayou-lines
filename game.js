@@ -433,7 +433,7 @@
     addLog({ emoji: f.emoji, name: f.name, meta: w + " lb", pb: isPB, legend: !!f.legendary });
     showCard(f.emoji, badge, f.name,
       w + " lb · catch & release" + (isPB ? " · new personal best" : ""),
-      "+" + bucks + " ₿", pick(f.flavor), cls);
+      "+" + bucks + " ₿", pick(f.flavor), cls, key);
     afterCatch();
   }
 
@@ -464,8 +464,10 @@
     if ($("jobsPanel").classList.contains("open")) renderBoard();
   }
 
-  function showCard(emoji, badge, name, detail, value, flavor, cls) {
-    $("catchEmoji").textContent = emoji;
+  function showCard(emoji, badge, name, detail, value, flavor, cls, ref) {
+    const em = $("catchEmoji");
+    if (ref && window.FishArt && window.FishArt.has(ref)) em.innerHTML = window.FishArt.svg(ref, { w: 168 });
+    else em.textContent = emoji;
     const b = $("catchBadge"); b.textContent = badge; b.className = "badge " + (cls || "");
     $("catchName").textContent = name;
     $("catchDetail").textContent = detail;
@@ -863,8 +865,9 @@
       flavor = `<div class="g-flavor">${def.flavor[0]}</div>`;
     }
     const whereLabel = isLegend ? "legend of" : "found in";
+    const art = (window.FishArt && window.FishArt.has(ref)) ? window.FishArt.svg(ref, { w: 58 }) : def.emoji;
     return `<div class="gCard ${logged ? "logged" : ""} ${isLegend ? "legend" : ""}">
-        <span class="g-emoji">${def.emoji}</span>
+        <span class="g-emoji">${art}</span>
         <div class="g-body">
           <div class="g-name">${logged ? def.name : "• • • • •"} ${isLegend ? '<span class="g-crown">legend</span>' : ""}</div>
           ${recLine}

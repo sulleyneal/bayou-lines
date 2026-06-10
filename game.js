@@ -586,16 +586,27 @@
 
   function svgToBlob(svg) {
     return new Promise((res, rej) => {
-      const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+      // data-URI source (not blob:) keeps the canvas untainted on iOS Safari
+      const src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
       const img = new Image();
       img.onload = () => {
-        const c = document.createElement("canvas"); c.width = PHOTO_W; c.height = PHOTO_H;
-        c.getContext("2d").drawImage(img, 0, 0, PHOTO_W, PHOTO_H);
-        URL.revokeObjectURL(url);
-        c.toBlob(b => res({ blob: b, url: c.toDataURL("image/png") }), "image/png");
+        try {
+          const c = document.createElement("canvas"); c.width = PHOTO_W; c.height = PHOTO_H;
+          const ctx = c.getContext("2d");
+          ctx.fillStyle = "#0e2826"; ctx.fillRect(0, 0, PHOTO_W, PHOTO_H);
+          ctx.drawImage(img, 0, 0, PHOTO_W, PHOTO_H);
+          const url = c.toDataURL("image/png");
+          c.toBlob(b => res({ blob: b || dataURLtoBlob(url), url }), "image/png");
+        } catch (e) { rej(e); }
       };
-      img.onerror = rej; img.src = url;
+      img.onerror = () => rej(new Error("image load failed"));
+      img.src = src;
     });
+  }
+  function dataURLtoBlob(d) {
+    const [head, b64] = d.split(","); const bin = atob(b64); const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: (head.match(/:(.*?);/) || [])[1] || "image/png" });
   }
 
   let photoBlob = null;

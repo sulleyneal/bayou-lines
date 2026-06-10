@@ -2,7 +2,7 @@
    Strategy: navigation = network-first (always get the latest page when
    online, fall back to cache offline). Assets = stale-while-revalidate
    (instant from cache, refreshed in the background for next time). */
-const VERSION = "bayou-v5";
+const VERSION = "bayou-v6";
 const CORE = [
   "./", "./index.html", "./styles.css",
   "./data.js", "./fishart.js", "./campart.js", "./audio.js", "./game.js",
@@ -25,16 +25,22 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
+  const url = new URL(req.url);
 
-  if (req.mode === "navigate") {
+  // App code (HTML/JS/CSS/manifest) = NETWORK-FIRST so updates land immediately
+  // when online; fall back to cache only when offline. This prevents the
+  // "new HTML, old JS" mismatch that strands buttons without their handlers.
+  const isCode = req.mode === "navigate" || /\.(html|js|css|webmanifest)$/.test(url.pathname);
+  if (isCode) {
     e.respondWith(
       fetch(req)
         .then(r => { const c = r.clone(); caches.open(VERSION).then(cache => cache.put(req, c)); return r; })
-        .catch(() => caches.match(req).then(m => m || caches.match("./index.html")))
+        .catch(() => caches.match(req).then(m => m || (req.mode === "navigate" ? caches.match("./index.html") : undefined)))
     );
     return;
   }
 
+  // Static assets (icons, images, fonts) = cache-first with background refresh
   e.respondWith(
     caches.match(req).then(cached => {
       const net = fetch(req)

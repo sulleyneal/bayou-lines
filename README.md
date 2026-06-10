@@ -1,39 +1,53 @@
 # Bayou Lines
 
 A slow, no-fail fishing game set on north Louisiana water. Cast, wait,
-reel on the bite. Earn Bayou Bucks, upgrade your tackle, work your way
-from a retention pond to the coastal marsh, and fill the Tackle Box.
-There are no timers that punish and no way to lose. It's a porch.
+feel the bite, and work a gentle fight to the bank. Earn Bayou Bucks,
+upgrade your tackle, travel from a retention pond to the coastal marsh,
+fill the Field Guide, and do favors for the regulars down at the
+landing. There are no timers that punish and no way to lose. It's a porch.
 
-## Run it
+**Play now:** https://sulleyneal.github.io/bayou-lines/
 
-Double-click **`index.html`**. No server, no build step, no install.
-Works offline. Your progress saves to the browser automatically.
+## What's in it
 
-> If you want sound, click once first — browsers won't start audio
-> until you interact with the page.
+- **The cast & the fight** — tap to cast, set the hook on the bite, then
+  reel it in. Tap to bring it faster or just watch — it lands either way.
+  "Let it run" surges add rhythm, never a loss.
+- **Nine locations** from the Neighborhood Pond to Grand Isle / Venice,
+  each with its own water, fish, junk, palette, and idle flavor.
+- **Economy & tackle shop** — four upgrade tracks (rod, line, lure, boat)
+  that change reel timing, break resistance, the catch table, and where
+  you can go.
+- **Day/night + weather + seasons** — a ~20-minute day, rolling weather
+  (the pre-front bite is the best), and seasons that track your real-world
+  month, all shifting the scene and the bite.
+- **The Field Guide** — a record card for every fish and legendary, with
+  silhouettes that ink in as you log them.
+- **The Landing** — bank regulars post easygoing bounties for bucks.
+- **The trotline** — set it before you leave; it lands a few while you're
+  gone (needs a boat).
+- **The Tackle Box** — 28 achievements with dry, Louisiana-flavored names.
 
-## Files
+## Install it (phone or desktop)
 
-| File         | What's in it |
-|--------------|--------------|
-| `index.html` | page structure + overlay panels |
-| `styles.css` | the dusk look — Fraunces + IBM Plex Mono, translucent panels |
-| `data.js`    | **all content**: locations, species, junk, equipment, achievements, tuning. Edit freely. |
-| `game.js`    | the loop, economy, travel, day/night, achievements |
-| `audio.js`   | generative ambient + cues (Web Audio API, no dependency) |
-| `validate.js`| dev tool: `node validate.js` checks `data.js` for dangling refs |
+It's a PWA. Open the link, then **Share → Add to Home Screen** (iOS) or
+**Install app** (Android/Chrome). It gets its own icon and plays offline.
 
-## Tweaking
+## Run / develop locally
 
-Almost everything you'd want to change lives in `data.js`:
+Double-click **`index.html`** — no server, no build step, works offline.
+Progress saves to the browser automatically.
 
-- **Add a fish** — drop an entry in `S` (or `L` for a legendary) and list
-  its `ref` in a location's `species`.
-- **Retune the economy** — `value` per species, `price` per equipment tier,
-  unlock `bucks`/`boatTier`/`milestone` per location.
-- **Speed up the sky** — `CONFIG.dayLengthMs` (default 20 min). Set it low
-  to watch a full day/night loop in a minute.
+| File | What's in it |
+|------|--------------|
+| `index.html` | structure + overlay panels + PWA tags |
+| `styles.css` | the dusk look — Fraunces + IBM Plex Mono |
+| `data.js` | **all content**: locations, species, junk, equipment, achievements, weather, seasons, characters, bounties, tuning |
+| `game.js` | the loop, economy, travel, day/night, weather, fight, guide, bounties, achievements |
+| `audio.js` | generative ambient + cues (Web Audio, no dependency) |
+| `sw.js` / `manifest.webmanifest` | offline + installable |
+| `validate.js` | dev tool: `node validate.js` checks `data.js` for dangling refs |
 
-Run `node validate.js` after content edits to make sure every reference
-still resolves.
+Almost everything you'd want to tweak lives in `data.js`. Run
+`node validate.js` after content edits. Deploys are automatic: any
+`git push` to `master` rebuilds the GitHub Pages site in a minute or two.

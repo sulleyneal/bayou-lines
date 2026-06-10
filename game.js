@@ -309,7 +309,8 @@
      starts a gentle give-and-take: tap to reel it in faster, or just
      watch and it still lands. Surges are 'let it run' beats — a pause,
      never a loss. Bigger fish = a longer, better fight. */
-  let fight = null; // { f, w, prog, target, surge, tick, surgeT }
+  let fight = null;     // { f, w, prog, target, surge, tick, surgeT }
+  let reeling = false;  // true while the player is pressing-and-holding to reel
 
   function strike() {
     clearTimers();
@@ -351,30 +352,32 @@
     setMsg("Heavier line lives at the tackle shop, when you're ready. No rush.");
   }
 
-  // fight "length" in arbitrary units — bigger fish take longer, gently capped
-  function fightTarget(w) { return Math.min(0.6 + w * 0.045, 2.6); }
+  // fight "length" in arbitrary units — even little fish give a beat,
+  // big ones are a real haul, gently capped so nothing drags.
+  function fightTarget(w) { return Math.min(0.9 + w * 0.05, 3.0); }
 
   function startFight(f, w) {
     state.phase = "fighting";
     fight = { f, w, prog: 0, target: fightTarget(w), surge: false };
     bobber.className = "bite";
     btn.textContent = "REEL!"; btn.classList.add("urgent");
-    setMsg("<b>On!</b> Reel it in — tap to bring it, ease off when it runs.");
+    setMsg("<b>On!</b> Hold to reel — ease off when it runs.");
     showFightBar(f);
-    fight.surgeT = setTimeout(triggerSurge, rand(900, 1700));
+    fight.surgeT = setTimeout(triggerSurge, rand(1100, 2000));
     fight.tick = setInterval(fightLoop, 110);
   }
 
   function fightLoop() {
     if (!fight) return;
-    if (!fight.surge) fight.prog += 0.030; // passive reel-in: just watching still lands it (~9s)
+    // passive reel-in (just watching still lands it); holding reels much faster
+    if (!fight.surge) fight.prog += 0.026 + (reeling ? 0.055 : 0);
     updateFightBar();
     if (fight.prog >= fight.target) landFish();
   }
 
   function fightTap() {
     if (!fight || fight.surge) return; // during a surge, you let it run
-    fight.prog += fight.target * 0.15; // a tap is worth a good crank
+    fight.prog += fight.target * 0.09; // a press gives an immediate crank
     bobber.classList.add("nibble");
     setTimeout(() => bobber && bobber.classList.remove("nibble"), 90);
     sfx("tick");
@@ -393,11 +396,12 @@
       fight.surge = false;
       $("fightBar").classList.remove("surge");
       setFightLabel("reel!");
-      fight.surgeT = setTimeout(triggerSurge, rand(1200, 2300));
-    }, rand(650, 950));
+      fight.surgeT = setTimeout(triggerSurge, rand(1500, 2700));
+    }, rand(450, 700));
   }
 
   function endFight() {
+    reeling = false;
     if (!fight) return;
     clearInterval(fight.tick);
     clearTimeout(fight.surgeT);
@@ -1062,7 +1066,7 @@
     if ($("catchCard").classList.contains("show")) { $("catchCard").classList.remove("show"); return; }
     if (state.phase === "idle") cast(x, y);
     else if (state.phase === "bite") strike();
-    else if (state.phase === "fighting") fightTap();
+    // fighting is driven by press-and-hold (pointer handlers below), not click
     else if (state.phase === "nibble") {
       clearTimers();
       state.phase = "idle";
@@ -1084,8 +1088,26 @@
     act(e.clientX, e.clientY);
   });
   btn.addEventListener("click", e => { e.stopPropagation(); act(); });
+
+  // press-and-hold to reel during a fight (touch + mouse)
+  function reelStart(e) {
+    if (state.phase !== "fighting") return;
+    if (e.target.closest("#toolbar") || e.target.closest(".panel") || e.target.closest("#catchCard")) return;
+    reeling = true;
+    fightTap(); // immediate crank on press for responsiveness
+  }
+  function reelStop() { reeling = false; }
+  scene.addEventListener("pointerdown", reelStart);
+  btn.addEventListener("pointerdown", reelStart);
+  window.addEventListener("pointerup", reelStop);
+  window.addEventListener("pointercancel", reelStop);
+
   document.addEventListener("keydown", e => {
-    if (e.code === "Space") { e.preventDefault(); act(); }
+    if (e.code === "Space") {
+      e.preventDefault();
+      if (state.phase === "fighting") fightTap(); // keyboard reels in cranks
+      else act();
+    }
     if (e.key === "Escape") { closeAllPanels(); $("catchCard").classList.remove("show"); }
   });
 

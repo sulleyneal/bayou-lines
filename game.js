@@ -92,9 +92,18 @@
     window.BayouAudio.unlock();
     window.BayouAudio.setVolume(state.settings.volume);
     window.BayouAudio.setMuted(state.settings.muted);
-    window.BayouAudio.setLocationMix(!!loc().coastal);
+    syncAudioScene();
   }
   function sfx(name) { if (audioOn && window.BayouAudio && window.BayouAudio[name]) window.BayouAudio[name](); }
+  function syncAudioScene() {
+    if (!window.BayouAudio || !window.BayouAudio.setScene) return;
+    window.BayouAudio.setScene({
+      phase: phaseId,
+      weather: weather ? weather.id : "clear",
+      coastal: !!loc().coastal,
+      season: (typeof currentSeason === "function") ? currentSeason().id : "summer",
+    });
+  }
 
   /* ---------- LOCATION ACCESS ---------- */
   function loc() { return D.LOCATIONS.find(l => l.id === state.locationId); }
@@ -741,7 +750,7 @@
     document.body.classList.toggle("dark", L.dark > 0.45);
 
     const ph = currentPhase();
-    if (ph.id !== phaseId) phaseId = ph.id;
+    if (ph.id !== phaseId) { phaseId = ph.id; syncAudioScene(); }
     $("timeChip").textContent = ph.label;
     $("timeChip").title = ph.hint;
   }
@@ -772,6 +781,7 @@
     const season = currentSeason();
     $("weatherChip").textContent = w.label + " · " + season.label;
     $("weatherChip").title = w.report + "  —  " + season.report;
+    syncAudioScene();
     if (announce && state.phase === "idle") setMsg("The weather's shifting. " + w.report);
   }
   function startWeather() {
@@ -940,7 +950,7 @@
     state.locationId = id;
     const l = D.LOCATIONS.find(x => x.id === id);
     applyTheme(l);
-    if (window.BayouAudio) window.BayouAudio.setLocationMix(!!l.coastal);
+    syncAudioScene();
     updateStats();
     save();
     closePanel("travelPanel");

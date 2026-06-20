@@ -305,6 +305,8 @@ h1 em{font-style:italic;font-weight:400;color:var(--lantern)}
 .campTierRow .ct-body{flex:1;min-width:0}
 .campName{font-family:'Fraunces',serif;font-weight:600;font-size:15px;color:var(--lantern)}
 .campFlavor{font-size:10.5px;color:var(--cream-dim);font-style:italic;margin-top:3px;line-height:1.45}
+.campPerk{font-size:10.5px;color:var(--good);margin-top:6px;line-height:1.45}
+.tier-perk{font-size:10px;color:var(--good);margin-top:4px;line-height:1.4}
 .decorGrid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
 .decorChip{flex:1 1 46%;min-width:0;padding:10px 12px;border-radius:11px;border:1px solid rgba(232,193,112,.14);background:rgba(232,193,112,.03)}
 .decorChip.owned{border-color:rgba(127,176,105,.4);background:rgba(127,176,105,.06)}

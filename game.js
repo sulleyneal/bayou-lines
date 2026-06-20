@@ -127,6 +127,13 @@
   function lure() { return D.EQUIPMENT.lure[state.equip.lure]; }
   function boat() { return D.EQUIPMENT.boat[state.equip.boat]; }
 
+  // The camp's perk for the current (highest-owned) tier. Returns sane
+  // defaults so missing fields never break math.
+  function campPerk() {
+    const p = (D.CAMP.tiers[state.camp.tier] || {}).perk || {};
+    return { payMult: p.payMult || 1, biteBonus: p.biteBonus || 0, restMult: p.restMult || 1, trotBonus: p.trotBonus || 0 };
+  }
+
   const CLASS_RANK = { common: 0, trophy: 1, legendary: 2 };
 
   function pickFish() {
@@ -175,7 +182,7 @@
   function payout(f, w) {
     const currentBonus = loc().current ? 1.15 : 1; // rivers pay a little extra
     const featBonus = (state.daily && state.daily.featured === state.locationId) ? 1.2 : 1; // today's hot bite
-    return Math.max(1, Math.round(w * f.value * currentBonus * featBonus));
+    return Math.max(1, Math.round(w * f.value * currentBonus * featBonus * campPerk().payMult));
   }
 
   /* ---------- AMBIENT SCENERY ---------- */
@@ -343,7 +350,7 @@
   }
 
   function reelWindowMs() {
-    return rod().biteWindow * (loc().current ? D.CONFIG.currentBias : 1); // current = slightly snappier
+    return rod().biteWindow * (loc().current ? D.CONFIG.currentBias : 1) + campPerk().biteBonus; // current = snappier; camp = a touch more forgiving
   }
 
   function bite() {
@@ -523,6 +530,7 @@
 
     const bucks = payout(f, w);
     const key = refKey(f);
+    const firstEver = !state.caught[key]; // new to the Field Guide? (capture before recordCatch flips it)
     state.stats.catches++;
     state.stats.perLoc[state.locationId] = (state.stats.perLoc[state.locationId] || 0) + 1;
     const isPBnow = w > state.stats.pb;
@@ -532,8 +540,8 @@
     noteFlags(f, key);
     depleteStock(state.locationId);
     if (runHere(state.locationId).some(r => r.group.includes(key))) state.flags2.runCatch = true;
-    if (typeof creditBounties === "function") creditBounties(f, w, key); // wired in Stage E
-    creditDaily({ fish: true, legendary: !!f.legendary, w, key });
+    if (typeof creditBounties === "function") creditBounties(f, w, key, firstEver); // wired in Stage E
+    creditDaily({ fish: true, legendary: !!f.legendary, w, key, firstEver });
     state.bucks += bucks;
     const isPB = isPBnow;
     if (isPB) { state.stats.pb = w; state.stats.pbName = f.name; }
@@ -821,7 +829,7 @@
   function stockOf(id) {
     const s = state.stock[id] || (state.stock[id] = { v: 1, ts: Date.now() });
     const hrs = (Date.now() - s.ts) / 3600000;
-    if (hrs > 0) { s.v = Math.min(1, s.v + hrs * STOCK_RECOVER_PER_HR); s.ts = Date.now(); }
+    if (hrs > 0) { s.v = Math.min(1, s.v + hrs * STOCK_RECOVER_PER_HR * campPerk().restMult); s.ts = Date.now(); }
     return s.v;
   }
   function depleteStock(id) {
@@ -945,7 +953,7 @@
     const t = state.trotline;
     if (!t || !t.set || !t.ts) return;
     const mins = Math.min((Date.now() - t.ts) / 60000, TROT.capHours * 60);
-    const n = Math.min(Math.floor(mins / TROT.minutesPerFish), TROT.maxFish);
+    const n = Math.min(Math.floor(mins / TROT.minutesPerFish), TROT.maxFish + campPerk().trotBonus);
     if (n <= 0) return; // not enough soak time yet — leave it set
     let bucks = 0, pbHit = false;
     for (let i = 0; i < n; i++) {
@@ -1096,11 +1104,23 @@
   let bountySeq = 0;
   function bountyUID() { return "b" + (Date.now().toString(36)) + (bountySeq++); }
 
+  // How many species/legendaries the player has never caught — i.e. how
+  // many "new ones" are left for Amelia to name. Gates her bounty so it's
+  // never impossible once the Field Guide is full.
+  function nameableRemaining() {
+    let n = 0;
+    for (const k in D.S) if (!state.caught[k]) n++;
+    for (const k in D.L) if (!state.caught[k]) n++;
+    return n;
+  }
+
   function newBounty(usedTmplIds) {
-    const avail = D.BOUNTY_TEMPLATES.filter(t => !usedTmplIds.includes(t.id));
-    const tmpl = pick(avail.length ? avail : D.BOUNTY_TEMPLATES);
+    // Drop "new kinds" bounties when there's nothing left to discover.
+    const base = nameableRemaining() < 2 ? D.BOUNTY_TEMPLATES.filter(t => !t.newOnly) : D.BOUNTY_TEMPLATES;
+    const avail = base.filter(t => !usedTmplIds.includes(t.id));
+    const tmpl = pick(avail.length ? avail : base);
     const b = { uid: bountyUID(), tmpl: tmpl.id, giver: tmpl.giver, kind: tmpl.kind,
-      group: tmpl.group || null, noun: tmpl.noun || null, progress: 0, seen: [], done: false };
+      group: tmpl.group || null, noun: tmpl.noun || null, newOnly: !!tmpl.newOnly, progress: 0, seen: [], done: false };
     if (tmpl.kind === "weight") {
       b.minWeight = Math.round(rand(tmpl.min, tmpl.max));
       b.target = 1; b.reward = tmpl.reward;
@@ -1109,6 +1129,7 @@
       b.target = 1; b.reward = tmpl.reward; b.text = tmpl.flavor;
     } else { // species, junk, variety
       b.target = Math.round(rand(tmpl.min, tmpl.max));
+      if (b.newOnly) b.target = Math.max(1, Math.min(b.target, nameableRemaining())); // never ask for more than are left
       b.reward = (tmpl.perReward || 10) * b.target;
       b.text = tmpl.flavor.replace("{N}", b.target);
     }
@@ -1120,8 +1141,8 @@
     }
   }
 
-  function creditBounties(f, w, key) {
-    creditBountyEvent({ fish: true, legendary: !!f.legendary, w, key });
+  function creditBounties(f, w, key, firstEver) {
+    creditBountyEvent({ fish: true, legendary: !!f.legendary, w, key, firstEver });
   }
   function creditBountiesJunk() { creditBountyEvent({ junk: true }); }
 
@@ -1133,7 +1154,7 @@
       let hit = false;
       if (b.kind === "species" && ev.fish && b.group && b.group.includes(ev.key)) { b.progress++; hit = true; }
       else if (b.kind === "weight" && ev.fish && ev.w >= b.minWeight) { b.progress = 1; hit = true; }
-      else if (b.kind === "variety" && ev.fish) { if (!b.seen.includes(ev.key)) { b.seen.push(ev.key); b.progress = b.seen.length; hit = true; } }
+      else if (b.kind === "variety" && ev.fish && !(b.newOnly && !ev.firstEver)) { if (!b.seen.includes(ev.key)) { b.seen.push(ev.key); b.progress = b.seen.length; hit = true; } }
       else if (b.kind === "legendary" && ev.legendary) { b.progress = 1; hit = true; }
       else if (b.kind === "junk" && ev.junk) { b.progress++; hit = true; }
       if (hit) { changed = true; if (b.progress >= b.target) { b.done = true; done.push(b); } }
@@ -1405,13 +1426,15 @@
     const c = state.camp;
     if (window.CampArt) $("campScene").innerHTML = window.CampArt.svg(c.tier, c.decor);
     const tiers = D.CAMP.tiers, cur = tiers[c.tier], next = tiers[c.tier + 1];
+    const curNote = (cur.perk && cur.perk.note) ? `<div class="campPerk">${cur.perk.note}</div>` : "";
     let html = `<div class="campTierRow"><div class="ct-body">
-        <div class="campName">${cur.name}</div><div class="campFlavor">${cur.flavor}</div></div></div>`;
+        <div class="campName">${cur.name}</div><div class="campFlavor">${cur.flavor}</div>${curNote}</div></div>`;
     if (next) {
       const afford = state.bucks >= next.price;
+      const nextNote = (next.perk && next.perk.note) ? `<div class="tier-perk">Adds: ${next.perk.note}</div>` : "";
       html += `<div class="sectionLabel">Improve the camp</div>
         <div class="tierRow"><div class="tier-body"><div class="tier-name">${next.name}</div>
-          <div class="tier-flavor">${next.flavor}</div></div>
+          <div class="tier-flavor">${next.flavor}</div>${nextNote}</div>
           <button class="buyBtn" data-camp="tier" ${afford ? "" : "disabled"}>${next.price} ₿</button></div>`;
     }
     // decor
@@ -1754,6 +1777,9 @@
   startWeather();
   applyTheme(loc());
   rollDaily();      // fresh daily challenge + streak update
+  // Retire any pre-reframe Amelia bounty (old "different kinds" wording) so
+  // it comes back as the clearer "new to the Field Guide" favor.
+  state.bounties = state.bounties.filter(b => !(b.tmpl === "namer" && !b.newOnly));
   ensureBounties(); // always have a few favors waiting at the landing
   updateStats();
   renderLog();

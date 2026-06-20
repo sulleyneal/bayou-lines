@@ -781,7 +781,9 @@
        species  — catch N of a species group
        weight   — land one fish over X lb
        junk     — haul N junk
-       variety  — catch N different species (this outing)
+       variety  — catch N different species while the bounty is up
+                  (with newOnly:true, only kinds not yet in the Field
+                  Guide count — i.e. species you've never caught)
        legendary— land any named legendary
      ============================================================ */
   const BOUNTY_TEMPLATES = [
@@ -793,23 +795,35 @@
       flavor: "Betcha can't catch one bigger'n my cousin's. {X} pounds. Go on, I'll wait. (He won't wait.)" },
     { id: "cleanup", giver: "boudreaux", kind: "junk", min: 5, max: 12, perReward: 6,
       flavor: "Parish pays a little to pull junk out the water. {N} pieces and I'll square you up." },
-    { id: "namer",   giver: "amelia",    kind: "variety", min: 3, max: 5, perReward: 22,
-      flavor: "I want to name some NEW ones! Bring me {N} different kinds — any kinds, I'm not picky, I just like naming." },
+    { id: "namer",   giver: "amelia",    kind: "variety", newOnly: true, min: 2, max: 3, perReward: 40,
+      flavor: "I want to name some I've never met! Bring me {N} kinds that aren't in your Field Guide yet — ones I've never gotten to name." },
     { id: "story",   giver: "boudreaux", kind: "legendary", reward: 350,
       flavor: "Word is there's a big old one in this water. Bring me a story worth telling and I'll make it worth your while." },
   ];
 
   /* ============================================================
      CAMP — a home base you build up, plus decor you hang on it.
-     Cosmetic + a place to mount your trophies. Buy tiers in order.
+     Each tier now earns its keep: perk is the CUMULATIVE effect of
+     owning that tier (you buy them in order, so the highest owned
+     tier's perk is the one in force). Fields:
+       payMult   — multiplier on every catch's payout (rod + trotline)
+       biteBonus — extra ms added to the reel window (gentler fight)
+       restMult  — multiplier on how fast fished-down spots recover
+       trotBonus — extra fish the trotline can hold while you're away
+       note      — the plain-English line shown in the Camp panel
      ============================================================ */
   const CAMP = {
     tiers: [
-      { name: "A folding chair & a cooler", flavor: "Home base is wherever you set the cooler down.", price: 0 },
-      { name: "A little plank dock", flavor: "Now you can sit with your feet off the water. Luxury.", price: 300 },
-      { name: "A tin-roof lean-to", flavor: "Shade, and a place to hang the rods. Coming up in the world.", price: 900 },
-      { name: "A proper fish camp", flavor: "Bunks, a stove, a screen door that slaps. Heaven, with mosquitoes.", price: 2600 },
-      { name: "The whole compound", flavor: "Dock, cabin, porch, a flag. People ask to visit now.", price: 7000 },
+      { name: "A folding chair & a cooler", flavor: "Home base is wherever you set the cooler down.", price: 0,
+        perk: { payMult: 1, biteBonus: 0, restMult: 1, trotBonus: 0, note: "" } },
+      { name: "A little plank dock", flavor: "Now you can sit with your feet off the water — and a clean dock to ice your catch on.", price: 300,
+        perk: { payMult: 1.05, biteBonus: 0, restMult: 1, trotBonus: 0, note: "Catches sell for +5% — iced and handled right." } },
+      { name: "A tin-roof lean-to", flavor: "Shade, and a place to hang the rods so they're always rigged and ready.", price: 900,
+        perk: { payMult: 1.10, biteBonus: 200, restMult: 1, trotBonus: 0, note: "+10% on catches, and +0.2s on the reel window — rods ready to go." } },
+      { name: "A proper fish camp", flavor: "Bunks, a stove, a screen door that slaps. Stay the night and the water rests with you.", price: 2600,
+        perk: { payMult: 1.18, biteBonus: 200, restMult: 1.6, trotBonus: 1, note: "+18% on catches, +0.2s reel window, spots recover faster, and the trotline holds one more." } },
+      { name: "The whole compound", flavor: "Dock, cabin, porch, a flag. People ask to visit now.", price: 7000,
+        perk: { payMult: 1.30, biteBonus: 350, restMult: 2, trotBonus: 2, note: "+30% on catches, +0.35s reel window, spots recover twice as fast, and the trotline holds two more." } },
     ],
     decor: [
       { id: "lights", name: "A string of porch lights", price: 150, flavor: "Warm light over dark water. Worth every penny." },

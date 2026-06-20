@@ -19,7 +19,9 @@ landing. There are no timers that punish and no way to lose. It's a porch.
 - **Photo mode** — turn any catch into a shareable card (the fish over
   the location scenery) via the native share sheet.
 - **The Camp** — a home base you build from a folding chair to a full
-  compound, decorate, and hang your trophy wall on.
+  compound, decorate, and hang your trophy wall on. Each tier earns its
+  keep: better catch payouts, a more forgiving reel window, faster spot
+  recovery, and more trotline capacity.
 - **Daily challenges** — a seeded challenge each day, a login streak, and
   a featured "hot bite" location that pays extra.
 - **A living world** — a real-date moon phase (drawn in the sky), tides on

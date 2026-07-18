@@ -158,12 +158,21 @@ card, Guide row, and photo).
   low mist band drifting along the waterline. The catch card and scene look
   markedly more alive.
 
+A fresh graphics checker confirmed both improvements landed ("real fish eye, not
+googly"; "water reads as water now"), perf held (Master Angler panel 26ms, Guide
+27ms; frame pacing median 16.7ms, 0.8% >50ms under 4× throttle), and found zero
+regressions / NaN / exceptions. Its one nit — the sun-glitter column sat ~8%
+left of the sun and read as a hard "searchlight bar" — is now fixed: the
+reflection is a tapered glitter wedge, aligned under the sun, narrow at the
+horizon and spreading toward the viewer, with soft scattered highlights instead
+of stripes. Verified in-pixel.
+
 Verification: all three suites still green (17/17, 9/9, 12/12); zero console
-errors in scene + catch play; `node validate.js` clean. Art is memoized, so the
-extra detail doesn't re-rasterize per frame.
+errors; `node validate.js` clean. Art is memoized, so the detail doesn't
+re-rasterize per frame.
 
 ## Biggest known gap right now
-Down to visual refinement. Remaining art notes for a possible pass 3 (only if a
-checker still faults the pixels): more distinct per-species silhouettes and
-per-location midground props/identity; a fuller HUD hierarchy. The bar itself
-remains met.
+The bar is met and the two headline art notes (fish, water) are addressed and
+checker-approved. Remaining polish for a possible pass 3, only if a checker
+still faults the pixels: more distinct per-species silhouettes, per-location
+midground props/identity, and a fuller HUD hierarchy.

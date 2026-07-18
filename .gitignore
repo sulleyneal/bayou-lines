@@ -9,3 +9,4 @@ package-lock.json
 bayou-fish-lineup.png
 _*.png
 _*.svg
+test/*.png

@@ -35,6 +35,12 @@ body{
 
 /* ============ SCENE ============ */
 #scene{position:fixed;inset:0;cursor:pointer;transition:filter 2.4s linear}
+/* cinematic vignette — frames the water and gives the scene real depth */
+#scene::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:4;
+  background:
+    radial-gradient(130% 100% at 50% 34%,transparent 58%,rgba(6,17,15,.30) 84%,rgba(4,12,11,.5) 100%);
+}
 /* fireflies only come out once the light goes; stars likewise */
 body:not(.dark) .firefly{opacity:0 !important;animation:none}
 #sky{
@@ -51,8 +57,9 @@ body:not(.dark) .firefly{opacity:0 !important;animation:none}
 @keyframes twinkle{0%,100%{opacity:.25}50%{opacity:1}}
 #sun{
   position:absolute;left:68%;top:30%;width:72px;height:72px;border-radius:50%;
-  background:radial-gradient(circle,#ffe7b0 0%,#f2a65a 60%,rgba(242,166,90,0) 75%);
+  background:radial-gradient(circle,#fff3d4 0%,#ffe7b0 34%,#f2a65a 62%,rgba(242,166,90,0) 76%);
   filter:blur(1px);
+  box-shadow:0 0 70px 34px rgba(242,166,90,.22),0 0 140px 70px rgba(242,166,90,.10);
   transition:top 4s linear,transform 4s linear,opacity 4s linear,background 4s linear;
 }
 
@@ -69,6 +76,17 @@ body:not(.dark) .firefly{opacity:0 !important;animation:none}
   position:absolute;left:0;right:0;bottom:0;height:54%;
   background:linear-gradient(to bottom,#5b4a3f 0%,var(--water-hi) 12%,var(--water-lo) 70%);
   overflow:hidden;transition:background 1.4s linear;
+}
+/* atmospheric perspective: a soft lit band where sky meets water, plus a
+   bright waterline so the horizon reads as horizon, not a seam */
+#water::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:22%;pointer-events:none;z-index:1;
+  background:linear-gradient(to bottom,rgba(255,240,208,.26),rgba(255,240,208,.05) 46%,transparent);
+}
+#water::after{
+  content:"";position:absolute;top:0;left:0;right:0;height:2px;pointer-events:none;z-index:2;
+  background:linear-gradient(90deg,transparent,rgba(255,244,214,.5) 40%,rgba(255,244,214,.6) 60%,transparent);
+  filter:blur(.4px);
 }
 .shimmer{
   position:absolute;height:2px;border-radius:2px;
@@ -244,6 +262,32 @@ h1 em{font-style:italic;font-weight:400;color:var(--lantern)}
   background:var(--ui-panel);color:var(--good);border:1px solid rgba(127,176,105,.45);
 }
 .trotBtn:disabled{color:var(--cream-dim);border-color:rgba(232,193,112,.14);cursor:default}
+
+/* daily challenge chip — a quiet, always-there reason to come back tomorrow */
+#dailyChip{
+  position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top,0px));
+  transform:translateX(-50%);z-index:9;
+  display:none;align-items:center;gap:7px;max-width:min(320px,72vw);
+  font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.2;
+  padding:7px 14px;border-radius:999px;cursor:pointer;
+  background:var(--ui-panel);color:var(--cream);
+  border:1px solid var(--ui-border);
+  backdrop-filter:blur(6px);box-shadow:0 3px 14px rgba(0,0,0,.34);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:border-color .2s,color .2s,transform .12s;
+}
+#dailyChip.show{display:inline-flex}
+#dailyChip:hover{border-color:var(--accent);transform:translateX(-50%) translateY(-1px)}
+#dailyChip .dc-streak{color:#f0b46a}
+#dailyChip.done{border-color:rgba(127,176,105,.5);color:var(--good)}
+#dailyChip.done .dc-streak{color:var(--good)}
+
+/* first-fight coach: a soft pulse on the button so "hold to reel" is obvious */
+#actionBtn.coach{animation:coachPulse 1.05s ease-in-out infinite}
+@keyframes coachPulse{
+  0%,100%{box-shadow:0 4px 20px rgba(0,0,0,.35),0 0 0 0 rgba(232,193,112,.5)}
+  50%{box-shadow:0 4px 20px rgba(0,0,0,.35),0 0 0 10px rgba(232,193,112,0)}
+}
 
 /* ============ MESSAGE + BUTTONS ============ */
 #message{

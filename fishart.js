@@ -203,6 +203,7 @@
     const earSpot = prof.earSpot ? `<ellipse cx="${startX + (96 - startX) * 0.28}" cy="${MY - a.bodyH * 0.1}" rx="3" ry="4.2" fill="${prof.earSpot}"/>` : "";
     const tailEye = prof.tailEye ? `<circle cx="92" cy="${MY - a.bodyH * 0.2}" r="3.4" fill="${prof.tailEye}"/><circle cx="92" cy="${r2(MY - a.bodyH * 0.2)}" r="1.6" fill="#f3e9d5" opacity="0.7"/>` : "";
     const gloss = `<path d="${body}" fill="url(#gloss${id})" opacity="0.5"/>`;
+    const shade = `<path d="${body}" fill="url(#shade${id})"/>`; // belly grounding shadow → rounder body
 
     return `<svg viewBox="0 0 ${VB_W} ${VB_H}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg" class="fishart">
       <defs>
@@ -212,6 +213,9 @@
         <linearGradient id="gloss${id}" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/><stop offset="0.35" stop-color="#ffffff" stop-opacity="0"/>
         </linearGradient>
+        <linearGradient id="shade${id}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0.5" stop-color="#0a120e" stop-opacity="0"/><stop offset="1" stop-color="#0a120e" stop-opacity="0.28"/>
+        </linearGradient>
         <clipPath id="${cid}"><path d="${body}"/></clipPath>
       </defs>
       ${glow}
@@ -220,6 +224,7 @@
       ${snoutEl}
       <path d="${body}" fill="url(#${gid})" stroke="${bodyStroke}" stroke-width="${bodyStrokeW}" stroke-opacity="${bodyStrokeO}"/>
       ${pat}
+      ${shade}
       ${gloss}
       ${front}
       ${barbels}

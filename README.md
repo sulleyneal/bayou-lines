@@ -69,6 +69,8 @@ Progress saves to the browser automatically.
 | `audio.js` | generative ambient + cues (Web Audio, no dependency) |
 | `sw.js` / `manifest.webmanifest` | offline + installable |
 | `validate.js` | dev tool: `node validate.js` checks `data.js` for dangling refs |
+| `test/` | dev-only: a captured pre-change save fixture + headless checks (need a local server + Playwright); not shipped to the game |
+| `STATUS.md` | running build log — what shipped, the biggest known gap, what's next |
 
 Almost everything you'd want to tweak lives in `data.js`. Run
 `node validate.js` after content edits. Deploys are automatic: any

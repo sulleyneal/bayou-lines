@@ -48,13 +48,31 @@
     "caught", "records", "legends", "flags", "flags2", "achievements", "bounties", "camp", "daily", "stock", "story", "ghost", "trotline", "log", "settings"];
   let saveLocked = false; // true during reset, so nothing re-saves stale data
 
+  const SAVE_VERSION = 3;
   function save() {
     if (saveLocked) return;
     try {
-      const snap = { v: 2 };
+      const snap = { v: SAVE_VERSION };
       SAVE_FIELDS.forEach(k => { snap[k] = state[k]; });
       localStorage.setItem(D.CONFIG.saveKey, JSON.stringify(snap));
     } catch (e) { /* private mode / quota — game still works in-session */ }
+  }
+
+  /* Versioned, lossless migration. Old saves are never wiped — we only ADD.
+     Most new systems (size-grades, the mastery ledger) derive from existing
+     `records`/`stats`, so v2→v3 mostly re-stamps the version; the explicit
+     hook is here so future changes have a home and a paper trail. */
+  function migrate(snap) {
+    let v = snap.v || 1; // pre-v2 saves had no version field
+    if (v < 3) {
+      snap.flags = snap.flags || {};
+      // A veteran mid-save has already been coached by the water itself.
+      if ((snap.stats && snap.stats.catches) > 3 && snap.flags.coachedReel === undefined)
+        snap.flags.coachedReel = true;
+      v = 3;
+    }
+    snap.v = v;
+    return snap;
   }
 
   function deepMerge(target, src) {
@@ -72,8 +90,11 @@
     try { raw = localStorage.getItem(D.CONFIG.saveKey); } catch (e) { return; }
     if (!raw) return;
     try {
-      const snap = JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      const wasVersion = parsed.v || 1;
+      const snap = migrate(parsed);
       SAVE_FIELDS.forEach(k => { if (snap[k] !== undefined) deepMerge(state, { [k]: snap[k] }); });
+      if (wasVersion < SAVE_VERSION) save(); // persist the upgrade now, so it never depends on a later action
     } catch (e) { /* corrupt save — start fresh rather than crash */ }
   }
 
@@ -135,6 +156,12 @@
   }
 
   const CLASS_RANK = { common: 0, trophy: 1, legendary: 2 };
+
+  /* First-timer's grace. A brand-new player's opening casts bite fast and
+     land clean — no junk, no break-off, no wandering ghost — so the very
+     first fish is a fish, well inside a minute. It fades on its own after a
+     few; nothing announces it, nothing punishes its absence. */
+  function inGrace() { return (state.stats.catches || 0) < 3; }
 
   function pickFish() {
     const table = catchTable();
@@ -335,7 +362,8 @@
     startIdleTicker();
 
     const stockFactor = 1 + (1 - stockOf(state.locationId)) * 0.6; // low stock = slower bites
-    const wait = rand(D.CONFIG.baseWaitMs[0], D.CONFIG.baseWaitMs[1]) * (weather ? weather.biteSpeed : 1) * conditions().speed * stockFactor;
+    let wait = rand(D.CONFIG.baseWaitMs[0], D.CONFIG.baseWaitMs[1]) * (weather ? weather.biteSpeed : 1) * conditions().speed * stockFactor;
+    if (inGrace()) wait = rand(1100, 2600); // first-timer's grace: a quick, sure bite
     biteTimer = setTimeout(nibble, wait);
   }
 
@@ -367,7 +395,7 @@
     bobber.className = "";
     line.style.display = "none"; bobber.style.display = "none";
     btn.textContent = "Cast a line";
-    btn.classList.remove("urgent");
+    btn.classList.remove("urgent", "coach");
   }
 
   function miss() {
@@ -388,11 +416,13 @@
   function strike() {
     clearTimers();
     ripple(bobberPos.x, bobberPos.y);
-    if (ghostEligible() && Math.random() < GHOST_CHANCE) { ghostHook(); return; }
-    if (Math.random() < junkChance()) { resolveJunk(); return; }
+    if (!inGrace()) { // grace period: only clean, landable fish — no junk, ghost, or snap
+      if (ghostEligible() && Math.random() < GHOST_CHANCE) { ghostHook(); return; }
+      if (Math.random() < junkChance()) { resolveJunk(); return; }
+    }
     const f = pickFish();
     const w = +rand(f.w[0], f.w[1]).toFixed(1);
-    if (breakOff(f, w)) { resolveBreakoff(); return; }
+    if (!inGrace() && breakOff(f, w)) { resolveBreakoff(); return; }
     startFight(f, w);
   }
 
@@ -402,6 +432,19 @@
     checkAchievements();
     setMsg("Back to the water whenever you're ready. No rush. Genuinely none.");
     checkStory();
+    nudgeComeBack();
+  }
+
+  // Once, early on, name the reason to come back tomorrow out loud — the daily
+  // resets and the streak builds. Chill: missing a day just resets the streak.
+  function nudgeComeBack() {
+    if (state.flags.toldDaily || (state.stats.catches || 0) < 2) return;
+    state.flags.toldDaily = true; save();
+    const el = document.createElement("div");
+    el.className = "toast bounty-toast";
+    el.innerHTML = `<span class="t-icon">📅</span><span><span class="t-label">Come back tomorrow</span>` +
+      `a fresh challenge &amp; a streak, daily · miss one, no harm</span>`;
+    setTimeout(() => { $("toasts").appendChild(el); setTimeout(() => el.remove(), 5600); }, 1400);
   }
 
   function resolveJunk() {
@@ -463,7 +506,12 @@
     fight = { f, w, prog: 0, target, surge: false, p };
     bobber.className = "bite";
     btn.textContent = "REEL!"; btn.classList.add("urgent");
-    setMsg("<b>On!</b> Hold to reel — ease off when it runs.");
+    if (!state.flags.coachedReel) { // first fight ever: teach the hold, gently
+      btn.classList.add("coach");
+      setMsg("<b>On!</b> Press and <b>hold</b> the button to reel.", "ease off when it runs — and it lands either way");
+    } else {
+      setMsg("<b>On!</b> Hold to reel — ease off when it runs.");
+    }
     spawnSplash(bobberPos.x, bobberPos.y, 8, 22);
     hapt(18);
     showFightBar(f);
@@ -525,6 +573,8 @@
     const f = fight.f, w = fight.w;
     endFight();
     state.phase = "idle"; resetTackle();
+    btn.classList.remove("coach");
+    state.flags.coachedReel = true; // learned it; the coach hint retires for good
     ripple(bobberPos.x, bobberPos.y);
     spawnSplash(bobberPos.x, bobberPos.y, 16, 34); // the fish breaks the surface
 
@@ -583,6 +633,7 @@
     if ($("guidePanel").classList.contains("open")) renderGuide();
     if ($("jobsPanel").classList.contains("open")) renderBoard();
     if ($("campPanel").classList.contains("open")) renderCamp();
+    renderDailyChip();
   }
 
   let lastCatch = null; // for photo mode
@@ -1258,6 +1309,21 @@
     }
     if ($("jobsPanel").classList.contains("open")) renderBoard();
   }
+
+  // The always-visible daily chip: a stated, shown reason to come back tomorrow.
+  function renderDailyChip() {
+    const el = $("dailyChip");
+    if (!el) return;
+    const d = state.daily;
+    if (!d || !d.kind) { el.classList.remove("show"); return; }
+    const short = (d.text || "today's challenge").replace(/\s*today\s*$/i, "");
+    const streak = d.streak || 0;
+    el.innerHTML = `<span>📅 ${d.done ? "✓ " : ""}${esc(short)}</span>` +
+      (streak > 1 ? `<span class="dc-streak">🔥${streak}</span>` : "");
+    el.classList.toggle("done", !!d.done);
+    el.classList.add("show");
+  }
+  $("dailyChip").addEventListener("click", () => { renderBoard(); openPanel("jobsPanel"); });
 
   function toastDaily(total, streak) {
     const el = document.createElement("div");

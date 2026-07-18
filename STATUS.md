@@ -113,14 +113,34 @@ completion → Master Angler flag). C1 17/17 and C2 9/9 still green (no regressi
 
 ---
 
+### Full-bar checker — all 7 done-bar items PASS ✅
+A fresh-context checker tried to fail the whole bar and could not:
+- **Cold open** first fish **4.15s**; delight + a shown/stated reason to return.
+- **Week two** new-after-day-7 content confirmed (Baptiste + a weekly beat that
+  rotates by calendar week; grades give an ongoing chase).
+- **Postgame** the swamp is hidden pre-Ghost / revealed after; the Master
+  Angler's Book is a genuine multi-week pursuit.
+- **Migration** 23/23 fields intact, re-stamped v3, zero errors.
+- **Performance** frame pacing under 4× CPU throttle **median 33ms / worst 133ms**
+  (4.7% of frames >50ms); payload **~116 KB gzipped**; PWA installs + plays offline.
+- **Voice** 0 of 20 sampled strings read generic.
+- **Regressions** 0 uncaught exceptions, 0 SVG-NaN across all 43 fish + 10 panels.
+
+Follow-up polish shipped from its one note + a self-caught leak:
+- **Fish-art SVG cache** — art is deterministic per (ref,size), so it's generated
+  once and reused. Removes the 100–133ms catch-card hitch on weak phones and
+  speeds the 31-row ledger / Field Guide.
+- **Guide spoiler fix** — the swamp's species also live in pre-Ghost waters, so
+  the Field Guide's "found in:" line had begun naming *Honey Island Swamp* before
+  the reveal. Ghost-gated location names are now hidden until you've met him.
+
 ## Biggest known gap right now
 
-All three headline gaps (cold open, week two, postgame) now have shipped systems.
-Next pass: **prove the whole bar end-to-end** — a Lighthouse PWA audit, measured
-frame pacing through a full cast-fight-land on a throttled mobile profile, and a
-fresh cold→day-14→postgame checker playthrough — then close whatever it finds.
+None blocking the bar. The build passes all seven done-bar items. Per process,
+one more independent fresh checker confirms before the bar is called met; then
+the loop continues on polish/depth until the checker genuinely can't fail it.
 
 ## Next up
-- Merge Cycle 3 after its checker passes.
-- Ongoing — Lighthouse PWA + throttled frame-pacing measurement; a full-bar
-  checker sweep; polish whatever it surfaces.
+- Confirming fresh checker on the merged build.
+- Then: keep closing the smallest remaining gaps (a graphics pass 2, more
+  week-3+ texture) as long as a checker can find one.

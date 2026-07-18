@@ -1700,10 +1700,18 @@
   const GUIDE_FISH = Object.keys(D.S).filter(k => REF_LOCS[k]);
   const GUIDE_LEGENDS = Object.keys(D.L).filter(k => REF_LOCS[k]);
 
+  // location names to keep out of the Field Guide until they've revealed
+  // themselves — so a pre-Ghost player never reads "Honey Island Swamp" here.
+  function hiddenLocNames() {
+    return D.LOCATIONS.filter(l => l.unlock && l.unlock.ghost && !state.ghost.caught).map(l => l.name);
+  }
+
   function guideCard(ref, def, isLegend) {
     const logged = !!state.caught[ref];
     const rec = state.records[ref];
-    const where = REF_LOCS[ref] ? REF_LOCS[ref].join(" · ") : "";
+    const hidden = hiddenLocNames();
+    const names = (REF_LOCS[ref] || []).filter(n => !hidden.includes(n));
+    const where = names.length ? names.join(" · ") : "somewhere they don't put on a map";
     let recLine = "", flavor = "";
     if (logged && rec) {
       const g = bestGradeOf(ref), idx = gradeIndexOf(ref);

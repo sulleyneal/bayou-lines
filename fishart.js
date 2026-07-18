@@ -181,13 +181,20 @@
     return s;
   }
 
+  // memo cache: art is deterministic per (ref, size), so generate each once.
+  // Keeps catch cards, the Field Guide, the trophy wall, and the 31-row Master
+  // Angler ledger from re-rasterizing SVGs and hitching frames.
+  const CACHE = {};
+
   function svg(ref, opts) {
     opts = opts || {};
     const prof = P[ref];
     if (!prof) return null; // caller falls back to emoji
+    const w = opts.w || 120, h = opts.h || (w * VB_H / VB_W);
+    const ck = ref + "|" + w + "|" + h;
+    if (CACHE[ck]) return CACHE[ck];
     const a = Object.assign({}, ARCH[prof.arch], prof);
     const id = ref.replace(/[^a-z0-9]/gi, "");
-    const w = opts.w || 120, h = opts.h || (w * VB_H / VB_W);
 
     // seed Math.random by ref so patterns are stable across renders
     let s = 0; for (let i = 0; i < ref.length; i++) s = (s * 31 + ref.charCodeAt(i)) >>> 0;
@@ -220,7 +227,7 @@
     const gloss = `<path d="${body}" fill="url(#gloss${id})" opacity="0.5"/>`;
     const shade = `<path d="${body}" fill="url(#shade${id})"/>`; // belly grounding shadow → rounder body
 
-    return `<svg viewBox="0 0 ${VB_W} ${VB_H}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg" class="fishart">
+    const out = `<svg viewBox="0 0 ${VB_W} ${VB_H}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg" class="fishart">
       <defs>
         <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="${prof.back}"/><stop offset="0.55" stop-color="${mix(prof.back, prof.belly, 0.5)}"/><stop offset="1" stop-color="${prof.belly}"/>
@@ -247,6 +254,8 @@
       ${eye}
       ${sparkle}
     </svg>`;
+    CACHE[ck] = out;
+    return out;
   }
 
   // simple hex color mix

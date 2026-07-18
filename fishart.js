@@ -16,17 +16,17 @@
   // tail: 'fork' | 'round' | 'fan' · snout: extra nose length · barbels: catfish whiskers
   // dorsal: {x0,x1,h} back fin span · longDorsal: bowfin-style ribbon
   const ARCH = {
-    panfish:  { bodyH: 23, tailBaseH: 7, backPeak: 0.44, bulge: 1.0, tail: "fork", tailLen: 16, tailSpread: 15, dorsal: { x0: 0.30, x1: 0.66, h: 11 }, anal: true },
-    bass:     { bodyH: 17, tailBaseH: 6, backPeak: 0.40, bulge: 0.85, tail: "fork", tailLen: 18, tailSpread: 15, dorsal: { x0: 0.34, x1: 0.64, h: 9 }, mouth: 6 },
+    panfish:  { bodyH: 23, tailBaseH: 7, backPeak: 0.44, bulge: 1.0, tail: "fork", tailLen: 16, tailSpread: 15, dorsal: { x0: 0.30, x1: 0.66, h: 11 }, anal: true, scales: true },
+    bass:     { bodyH: 17, tailBaseH: 6, backPeak: 0.40, bulge: 0.85, tail: "fork", tailLen: 18, tailSpread: 15, dorsal: { x0: 0.34, x1: 0.64, h: 9 }, mouth: 6, scales: true },
     catfish:  { bodyH: 16, tailBaseH: 6, backPeak: 0.34, bulge: 0.7, tail: "fork", tailLen: 17, tailSpread: 13, barbels: true, blunt: 5, dorsal: { x0: 0.30, x1: 0.40, h: 9 } },
     gar:      { bodyH: 9,  tailBaseH: 5, backPeak: 0.52, bulge: 0.5, tail: "round", tailLen: 13, tailSpread: 9, snout: 22, dorsal: { x0: 0.66, x1: 0.80, h: 7 } },
     bowfin:   { bodyH: 14, tailBaseH: 8, backPeak: 0.5, bulge: 0.6, tail: "round", tailLen: 12, tailSpread: 11, longDorsal: true },
-    drum:     { bodyH: 22, tailBaseH: 6, backPeak: 0.32, bulge: 0.78, tail: "fork", tailLen: 15, tailSpread: 13, dorsal: { x0: 0.30, x1: 0.66, h: 10 }, humped: true },
-    silver:   { bodyH: 15, tailBaseH: 6, backPeak: 0.40, bulge: 0.8, tail: "fork", tailLen: 18, tailSpread: 16, dorsal: { x0: 0.34, x1: 0.6, h: 8 } },
-    redfish:  { bodyH: 16, tailBaseH: 6, backPeak: 0.36, bulge: 0.78, tail: "fork", tailLen: 17, tailSpread: 13, dorsal: { x0: 0.32, x1: 0.62, h: 9 } },
+    drum:     { bodyH: 22, tailBaseH: 6, backPeak: 0.32, bulge: 0.78, tail: "fork", tailLen: 15, tailSpread: 13, dorsal: { x0: 0.30, x1: 0.66, h: 10 }, humped: true, scales: true },
+    silver:   { bodyH: 15, tailBaseH: 6, backPeak: 0.40, bulge: 0.8, tail: "fork", tailLen: 18, tailSpread: 16, dorsal: { x0: 0.34, x1: 0.6, h: 8 }, scales: true },
+    redfish:  { bodyH: 16, tailBaseH: 6, backPeak: 0.36, bulge: 0.78, tail: "fork", tailLen: 17, tailSpread: 13, dorsal: { x0: 0.32, x1: 0.62, h: 9 }, scales: true },
     trout:    { bodyH: 15, tailBaseH: 6, backPeak: 0.42, bulge: 0.85, tail: "fork", tailLen: 16, tailSpread: 12, dorsal: { x0: 0.36, x1: 0.56, h: 8 }, adipose: true },
     flat:     { bodyH: 26, tailBaseH: 7, backPeak: 0.5, bulge: 1.0, tail: "fan", tailLen: 12, tailSpread: 16, flat: true },
-    deep:     { bodyH: 24, tailBaseH: 6, backPeak: 0.4, bulge: 0.9, tail: "fork", tailLen: 14, tailSpread: 13, dorsal: { x0: 0.3, x1: 0.66, h: 11 } },
+    deep:     { bodyH: 24, tailBaseH: 6, backPeak: 0.4, bulge: 0.9, tail: "fork", tailLen: 14, tailSpread: 13, dorsal: { x0: 0.3, x1: 0.66, h: 11 }, scales: true },
     pike:     { bodyH: 11, tailBaseH: 6, backPeak: 0.52, bulge: 0.74, tail: "fork", tailLen: 15, tailSpread: 11, snout: 8, dorsal: { x0: 0.60, x1: 0.80, h: 7 } },
     paddle:   { bodyH: 13, tailBaseH: 7, backPeak: 0.42, bulge: 0.72, tail: "fork", tailLen: 18, tailSpread: 15, snout: 26, dorsal: { x0: 0.62, x1: 0.78, h: 7 } },
   };
@@ -220,7 +220,29 @@
         <path d="M 13 ${MY + 1} q -6 4 -9 9"/><path d="M 13 ${MY + 2} q -5 6 -6 12"/>
         <path d="M 14 ${MY - 1} q -7 -2 -11 -1"/></g>` : "";
     const eyeX = a.snout ? 12 + a.snout + 3 : (a.blunt ? 19 : 22), eyeY = MY - a.bodyH * 0.28;
-    const eye = `<circle cx="${eyeX}" cy="${r2(eyeY)}" r="${prof.big ? 3.2 : 2.6}" fill="#f6efe0"/><circle cx="${eyeX}" cy="${r2(eyeY)}" r="${prof.big ? 1.8 : 1.5}" fill="#1a1a1a"/>`;
+    // a real fish eye: dark ring, tinted iris, black pupil, a single catchlight
+    const eyeR = prof.big ? 2.9 : 2.4, iris = prof.eyeIris || "#9a6f24";
+    const eye =
+      `<circle cx="${eyeX}" cy="${r2(eyeY)}" r="${r2(eyeR)}" fill="#20190f"/>` +
+      `<circle cx="${eyeX}" cy="${r2(eyeY)}" r="${r2(eyeR * 0.72)}" fill="${iris}"/>` +
+      `<circle cx="${eyeX}" cy="${r2(eyeY)}" r="${r2(eyeR * 0.4)}" fill="#0d0b08"/>` +
+      `<circle cx="${r2(eyeX - eyeR * 0.32)}" cy="${r2(eyeY - eyeR * 0.34)}" r="${r2(eyeR * 0.26)}" fill="#f4efe0" opacity="0.92"/>`;
+    // gill plate (operculum) — a soft curved seam behind the head
+    const gillX = eyeX + (prof.big ? 8 : 6.5);
+    const gill = `<g clip-path="url(#${cid})"><path d="M ${r2(gillX)} ${r2(MY - a.bodyH * 0.44)} Q ${r2(gillX - 3.5)} ${r2(MY + 1)} ${r2(gillX - 0.5)} ${r2(MY + a.bodyH * 0.46)}" fill="none" stroke="${mix(prof.back, '#05100a', 0.5)}" stroke-width="0.9" stroke-opacity="0.3" stroke-linecap="round"/></g>`;
+    // faint scale rows on scaled species (invisible at small sizes, texture up close)
+    let scales = "";
+    if (a.scales) {
+      const sx0 = startX + (96 - startX) * 0.24;
+      for (let c = 0; c < 6; c++) {
+        const x = sx0 + c * (96 - sx0) * 0.13;
+        for (let rrow = -2; rrow <= 2; rrow++) {
+          const y = MY + rrow * (a.bodyH * 0.3) + (c % 2) * (a.bodyH * 0.15);
+          scales += `<path d="M ${r2(x)} ${r2(y - 3)} q 3.4 3 0 6" fill="none" stroke="#0b1710" stroke-width="0.5" opacity="0.07"/>`;
+        }
+      }
+      scales = `<g clip-path="url(#${cid})">${scales}</g>`;
+    }
     const gillSpot = prof.gillSpot ? `<ellipse cx="${startX + (96 - startX) * 0.3}" cy="${MY + a.bodyH * 0.1}" rx="3.4" ry="5" fill="${prof.gillSpot}" opacity="0.85"/>` : "";
     const earSpot = prof.earSpot ? `<ellipse cx="${startX + (96 - startX) * 0.28}" cy="${MY - a.bodyH * 0.1}" rx="3" ry="4.2" fill="${prof.earSpot}"/>` : "";
     const tailEye = prof.tailEye ? `<circle cx="92" cy="${MY - a.bodyH * 0.2}" r="3.4" fill="${prof.tailEye}"/><circle cx="92" cy="${r2(MY - a.bodyH * 0.2)}" r="1.6" fill="#f3e9d5" opacity="0.7"/>` : "";
@@ -233,7 +255,7 @@
           <stop offset="0" stop-color="${prof.back}"/><stop offset="0.55" stop-color="${mix(prof.back, prof.belly, 0.5)}"/><stop offset="1" stop-color="${prof.belly}"/>
         </linearGradient>
         <linearGradient id="gloss${id}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/><stop offset="0.35" stop-color="#ffffff" stop-opacity="0"/>
+          <stop offset="0" stop-color="#ffffff" stop-opacity="0.62"/><stop offset="0.12" stop-color="#ffffff" stop-opacity="0.28"/><stop offset="0.4" stop-color="#ffffff" stop-opacity="0"/>
         </linearGradient>
         <linearGradient id="shade${id}" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0.5" stop-color="#0a120e" stop-opacity="0"/><stop offset="1" stop-color="#0a120e" stop-opacity="0.28"/>
@@ -246,10 +268,12 @@
       ${snoutEl}
       <path d="${body}" fill="url(#${gid})" stroke="${bodyStroke}" stroke-width="${bodyStrokeW}" stroke-opacity="${bodyStrokeO}"/>
       ${pat}
+      ${scales}
       ${shade}
       ${gloss}
       ${front}
       ${barbels}
+      ${gill}
       ${gillSpot}${earSpot}${tailEye}
       ${eye}
       ${sparkle}

@@ -134,13 +134,36 @@ Follow-up polish shipped from its one note + a self-caught leak:
   the Field Guide's "found in:" line had begun naming *Honey Island Swamp* before
   the reveal. Ghost-gated location names are now hidden until you've met him.
 
+## ✅ The done-bar is MET — confirmed by a second independent fresh checker
+Two fresh-context checkers, in sequence, tried to fail the whole bar and could
+not. Confirming run: cold-open first fish **4.3s**; week-two reveal (Baptiste +
+a weekly that rotates on a 7-week cycle, nothing new on day 1); postgame swamp
+hidden→revealed + a 31-species Master Angler book "meant to outlast a few
+seasons"; migration re-stamped v3 with every field intact and no swamp-name leak
+in Travel *or* the Guide; perf under 4× CPU throttle **median 16.7ms / worst
+83.3ms / 0.2% frames >50ms**, installs + plays **offline**; voice **0 generic**;
+**zero** uncaught exceptions or SVG-NaN across all 43 fish and 10 panels.
+
+The checker's read: "the real ceiling on this build is visual, not behavioral."
+
+### Cycle 4 — Graphics pass 2 ✅ (verified, checker pending)
+Addressing the checker's ranked art notes; fish art first (the hero of every
+card, Guide row, and photo).
+- **Fish art.** Replaced the "googly" white-dot eye with a real one — dark ring,
+  tinted amber iris, black pupil, a single catchlight — and added a gill-plate
+  seam, faint scale texture on scaled species, and a stronger dorsal gloss that
+  reads as a lit top edge. All 43 fish still render NaN-free.
+- **Water + light.** The sun now casts a broken, shimmering reflection column on
+  the water; richer animated caustics; soft golden light-shafts in the sky; and a
+  low mist band drifting along the waterline. The catch card and scene look
+  markedly more alive.
+
+Verification: all three suites still green (17/17, 9/9, 12/12); zero console
+errors in scene + catch play; `node validate.js` clean. Art is memoized, so the
+extra detail doesn't re-rasterize per frame.
+
 ## Biggest known gap right now
-
-None blocking the bar. The build passes all seven done-bar items. Per process,
-one more independent fresh checker confirms before the bar is called met; then
-the loop continues on polish/depth until the checker genuinely can't fail it.
-
-## Next up
-- Confirming fresh checker on the merged build.
-- Then: keep closing the smallest remaining gaps (a graphics pass 2, more
-  week-3+ texture) as long as a checker can find one.
+Down to visual refinement. Remaining art notes for a possible pass 3 (only if a
+checker still faults the pixels): more distinct per-species silhouettes and
+per-location midground props/identity; a fuller HUD hierarchy. The bar itself
+remains met.

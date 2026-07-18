@@ -1298,7 +1298,9 @@
   function renderBoard() {
     ensureBounties();
     const intro = '<div class="b-cast">' +
-      Object.values(D.CHARACTERS).map(c => `${c.emoji} <b style="color:var(--cream)">${c.name}</b> — ${c.blurb}`).join("<br>") +
+      Object.entries(D.CHARACTERS)
+        .filter(([id]) => id !== "baptiste" || metBaptiste()) // don't spoil Nonc Baptiste before he shows up
+        .map(([, c]) => `${c.emoji} <b style="color:var(--cream)">${c.name}</b> — ${c.blurb}`).join("<br>") +
       '</div>';
     const cards = state.bounties.map(b => {
       const c = D.CHARACTERS[b.giver];

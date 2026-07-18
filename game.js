@@ -37,6 +37,7 @@
     story: { seen: {}, ch: 0 }, // story progress
     ghost: { caught: false, nearMiss: false, sighted: false, toldReady: false }, // the Gray Ghost chase
     trotline: { set: false, ts: 0 }, // opt-in idle line
+    weekly: { lastWeek: "" }, // which weekly happening we last announced
     log: [],
     settings: { muted: false, volume: 0.6 },
   };
@@ -45,7 +46,7 @@
      Everything but the transient `phase` is saved. Loading deep-merges
      onto defaults so old saves survive new fields in future versions. */
   const SAVE_FIELDS = ["locationId", "unlocked", "bucks", "equip", "stats",
-    "caught", "records", "legends", "flags", "flags2", "achievements", "bounties", "camp", "daily", "stock", "story", "ghost", "trotline", "log", "settings"];
+    "caught", "records", "legends", "flags", "flags2", "achievements", "bounties", "camp", "daily", "stock", "story", "ghost", "trotline", "weekly", "log", "settings"];
   let saveLocked = false; // true during reset, so nothing re-saves stale data
 
   const SAVE_VERSION = 3;
@@ -163,6 +164,50 @@
      few; nothing announces it, nothing punishes its absence. */
   function inGrace() { return (state.stats.catches || 0) < 3; }
 
+  /* ---------- SIZE GRADES (the mastery chase) ----------
+     Each fish is graded against its OWN weight band, so a giant bluegill
+     outranks a dinky bass. Pure derivation from records[key].max — no new
+     save state, so old saves get grades for free. */
+  const GRADE_IDX = {}; D.GRADES.forEach((g, i) => { GRADE_IDX[g.id] = i; });
+  function speciesDef(key) { return D.S[key] || D.L[key]; }
+  function gradeForWeight(key, w) {
+    const def = speciesDef(key); if (!def || !def.w) return null;
+    const [w0, w1] = def.w; const f = w1 <= w0 ? 0 : Math.max(0, Math.min(1, (w - w0) / (w1 - w0)));
+    let g = D.GRADES[0]; for (const gr of D.GRADES) if (f >= gr.min) g = gr; return g;
+  }
+  function bestGradeOf(key) { // grade of the player's biggest of this species, or null if never caught
+    const rec = state.records[key]; if (!rec || !rec.max) return null;
+    return gradeForWeight(key, rec.max);
+  }
+  function gradeIndexOf(key) { const g = bestGradeOf(key); return g ? GRADE_IDX[g.id] : -1; }
+  function weightForGrade(key, gradeId) {
+    const def = speciesDef(key); if (!def || !def.w) return 0;
+    const gr = D.GRADES[GRADE_IDX[gradeId]]; return def.w[0] + gr.min * (def.w[1] - def.w[0]);
+  }
+  function gradeAtLeastCount(minId) { // # of species brought to at least this grade
+    const need = GRADE_IDX[minId]; let n = 0;
+    for (const k in state.records) if (state.records[k].max > 0 && speciesDef(k) && gradeIndexOf(k) >= need) n++;
+    return n;
+  }
+
+  /* ---------- WEEKLY happening ----------
+     One gentle event at the landing, rotating by the calendar week —
+     independent of the real-world season, so week two shows something week
+     one didn't. Perks are upside-only, and the whole system switches on once
+     you've met Nonc Baptiste (a natural week-two beat). */
+  function metBaptiste() { return !!(state.story.seen && state.story.seen.baptiste); }
+  function weekIndex(d) {
+    d = d || new Date();
+    const days = Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / 86400000);
+    return Math.floor((days + 3) / 7); // any fixed phase is fine; this rolls on Mondays
+  }
+  function currentWeekly() { const n = D.WEEKLY.length; return D.WEEKLY[((weekIndex() % n) + n) % n]; }
+  function weeklyOn() { return metBaptiste(); }
+  function weeklyPayMult(key) { const w = currentWeekly(); return (weeklyOn() && w.payBias && w.payBias.group.includes(key)) ? w.payBias.mult : 1; }
+  function weeklyJunkMult() { return weeklyOn() ? (currentWeekly().junkMult || 1) : 1; }
+  function weeklyRareBoost() { return weeklyOn() ? (currentWeekly().rareBoost || 0) : 0; }
+  function weeklyRunBoost() { return weeklyOn() ? (currentWeekly().runBoost || 0) : 0; }
+
   function pickFish() {
     const table = catchTable();
     const lr = lure();
@@ -172,7 +217,7 @@
     const ph = phaseId;
     const seasonBias = currentSeason().bias || {};
     const weatherBoost = weather ? weather.rarityBoost : 0;
-    const condBoost = conditions().rarity;
+    const condBoost = conditions().rarity + weeklyRareBoost();
     const locId = state.locationId;
     const weighted = table.map(e => {
       const k = refKey(e.def);
@@ -209,7 +254,8 @@
   function payout(f, w) {
     const currentBonus = loc().current ? 1.15 : 1; // rivers pay a little extra
     const featBonus = (state.daily && state.daily.featured === state.locationId) ? 1.2 : 1; // today's hot bite
-    return Math.max(1, Math.round(w * f.value * currentBonus * featBonus * campPerk().payMult));
+    const weekBonus = weeklyPayMult(refKey(f)); // this week's landing happening
+    return Math.max(1, Math.round(w * f.value * currentBonus * featBonus * weekBonus * campPerk().payMult));
   }
 
   /* ---------- AMBIENT SCENERY ---------- */
@@ -450,7 +496,7 @@
   function resolveJunk() {
     state.phase = "idle"; resetTackle();
     const { key, def: j } = pickJunk();
-    const pity = Math.round(rand(D.CONFIG.junkPity[0], D.CONFIG.junkPity[1]));
+    const pity = Math.max(1, Math.round(rand(D.CONFIG.junkPity[0], D.CONFIG.junkPity[1]) * weeklyJunkMult()));
     state.stats.junk++;
     state.stats.junkKinds[key] = (state.stats.junkKinds[key] || 0) + 1;
     state.bucks += pity;
@@ -581,6 +627,7 @@
     const bucks = payout(f, w);
     const key = refKey(f);
     const firstEver = !state.caught[key]; // new to the Field Guide? (capture before recordCatch flips it)
+    const prevGradeIdx = gradeIndexOf(key); // best grade BEFORE this fish (for the upgrade note)
     state.stats.catches++;
     state.stats.perLoc[state.locationId] = (state.stats.perLoc[state.locationId] || 0) + 1;
     const isPBnow = w > state.stats.pb;
@@ -600,10 +647,15 @@
     else hapt(28);
     const badge = f.legendary ? "legendary" : "catch";
     const cls = f.legendary ? "legendary" : "";
+    // did this fish upgrade your best SIZE-grade for its species? (the chase)
+    const gradedUp = !firstEver && gradeIndexOf(key) > prevGradeIdx;
+    const bestG = bestGradeOf(key);
+    let detail = w + " lb · catch & release" + (isPB ? " · new personal best" : "");
+    if (gradedUp && bestG) detail += " · ▲ your best yet — " + bestG.name;
     addLog({ emoji: f.emoji, name: f.name, meta: w + " lb", pb: isPB, legend: !!f.legendary });
-    showCard(f.emoji, badge, f.name,
-      w + " lb · catch & release" + (isPB ? " · new personal best" : ""),
+    showCard(f.emoji, badge, f.name, detail,
       "+" + bucks + " ₿", pick(f.flavor), cls, key);
+    if (gradedUp) setTimeout(() => sfx("chime"), 180);
     afterCatch();
   }
 
@@ -900,7 +952,7 @@
   function runHere(id) { return activeRuns().filter(r => r.locs.includes(id)); }
   function runBoostFor(key, id) {
     let mult = 1;
-    for (const r of runHere(id)) if (r.group.includes(key)) mult *= 2.3;
+    for (const r of runHere(id)) if (r.group.includes(key)) mult *= (2.3 + weeklyRunBoost());
     return mult;
   }
 
@@ -1166,8 +1218,11 @@
   }
 
   function newBounty(usedTmplIds) {
-    // Drop "new kinds" bounties when there's nothing left to discover.
-    const base = nameableRemaining() < 2 ? D.BOUNTY_TEMPLATES.filter(t => !t.newOnly) : D.BOUNTY_TEMPLATES;
+    // Drop "new kinds" bounties when there's nothing left to discover, and hold
+    // Nonc Baptiste's favors back until the player has actually met him.
+    const base = D.BOUNTY_TEMPLATES
+      .filter(t => !(t.newOnly && nameableRemaining() < 2))
+      .filter(t => !t.need || (t.need === "metBaptiste" && metBaptiste()));
     const avail = base.filter(t => !usedTmplIds.includes(t.id));
     const tmpl = pick(avail.length ? avail : base);
     const b = { uid: bountyUID(), tmpl: tmpl.id, giver: tmpl.giver, kind: tmpl.kind,
@@ -1178,6 +1233,8 @@
       b.text = tmpl.flavor.replace("{X}", b.minWeight);
     } else if (tmpl.kind === "legendary") {
       b.target = 1; b.reward = tmpl.reward; b.text = tmpl.flavor;
+    } else if (tmpl.kind === "grade") {
+      b.target = 1; b.reward = tmpl.reward; b.grade = tmpl.grade; b.text = tmpl.flavor;
     } else { // species, junk, variety
       b.target = Math.round(rand(tmpl.min, tmpl.max));
       if (b.newOnly) b.target = Math.max(1, Math.min(b.target, nameableRemaining())); // never ask for more than are left
@@ -1193,7 +1250,8 @@
   }
 
   function creditBounties(f, w, key, firstEver) {
-    creditBountyEvent({ fish: true, legendary: !!f.legendary, w, key, firstEver });
+    const gi = gradeForWeight(key, w);
+    creditBountyEvent({ fish: true, legendary: !!f.legendary, w, key, firstEver, gradeIdx: gi ? GRADE_IDX[gi.id] : -1 });
   }
   function creditBountiesJunk() { creditBountyEvent({ junk: true }); }
 
@@ -1207,6 +1265,7 @@
       else if (b.kind === "weight" && ev.fish && ev.w >= b.minWeight) { b.progress = 1; hit = true; }
       else if (b.kind === "variety" && ev.fish && !(b.newOnly && !ev.firstEver)) { if (!b.seen.includes(ev.key)) { b.seen.push(ev.key); b.progress = b.seen.length; hit = true; } }
       else if (b.kind === "legendary" && ev.legendary) { b.progress = 1; hit = true; }
+      else if (b.kind === "grade" && ev.fish && ev.gradeIdx >= GRADE_IDX[b.grade]) { b.progress = 1; hit = true; }
       else if (b.kind === "junk" && ev.junk) { b.progress++; hit = true; }
       if (hit) { changed = true; if (b.progress >= b.target) { b.done = true; done.push(b); } }
     }
@@ -1246,6 +1305,7 @@
       const pct = Math.min(100, (b.progress / b.target) * 100);
       const prog = b.kind === "weight" ? (b.progress ? "done" : "land one over " + b.minWeight + " lb")
         : b.kind === "legendary" ? (b.progress ? "done" : "any named legendary")
+        : b.kind === "grade" ? (b.progress ? "done" : "land a " + b.grade + "-or-better of anything")
         : b.progress + " / " + b.target;
       return `<div class="bounty">
           <div class="b-head"><span class="b-emoji">${c.emoji}</span>
@@ -1256,7 +1316,47 @@
           <div class="b-prog">${prog}</div>
         </div>`;
     }).join("");
-    $("jobsBody").innerHTML = dailyHTML() + '<div class="sectionLabel">Bounties</div>' + intro + cards;
+    $("jobsBody").innerHTML = weeklyHTML() + dailyHTML() + '<div class="sectionLabel">Bounties</div>' + intro + cards;
+  }
+
+  /* ---------- WEEKLY banner (Nonc Baptiste's almanac) ---------- */
+  function weeklyPerkLabel(w) {
+    if (w.payBias) {
+      const names = w.payBias.group.map(k => { const d = speciesDef(k); return d ? d.name.replace(/ \(.*/, "") : k; });
+      const shown = names.slice(0, 3).join(", ") + (names.length > 3 ? "…" : "");
+      return `+${Math.round((w.payBias.mult - 1) * 100)}% on ${shown}`;
+    }
+    if (w.junkMult) return `junk pays +${Math.round((w.junkMult - 1) * 100)}% this week`;
+    if (w.rareBoost && w.runBoost) return `the bite's up — better odds and the runs hit harder`;
+    if (w.runBoost) return `seasonal runs are hitting harder this week`;
+    if (w.rareBoost) return `a slightly better shot at the rare ones`;
+    return "";
+  }
+  function weeklyHTML() {
+    if (!weeklyOn()) return "";
+    const w = currentWeekly(), c = D.CHARACTERS.baptiste, perk = weeklyPerkLabel(w);
+    return `<div class="weeklyCard">
+        <div class="b-head"><span class="b-emoji">${c.emoji}</span><span class="b-giver">${w.title}</span>
+          <span class="b-reward">this week</span></div>
+        <div class="wk-blurb">${w.blurb}</div>
+        ${perk ? `<div class="wk-perk">🎣 ${perk}</div>` : ""}
+        <div class="wk-by">— ${c.name}'s almanac</div>
+      </div>`;
+  }
+  function toastWeekly(w) {
+    const el = document.createElement("div");
+    el.className = "toast bounty-toast";
+    el.innerHTML = `<span class="t-icon">${D.CHARACTERS.baptiste.emoji}</span>` +
+      `<span><span class="t-label">This week at the landing</span>${esc(w.title)}</span>`;
+    $("toasts").appendChild(el);
+    setTimeout(() => el.remove(), 5600);
+  }
+  function maybeAnnounceWeekly() {
+    if (!weeklyOn()) return;
+    const w = currentWeekly();
+    if (state.weekly.lastWeek === w.id) return;
+    state.weekly.lastWeek = w.id; save();
+    toastWeekly(w);
   }
 
   /* ---------- DAILY CHALLENGE + STREAK + FEATURED BITE ---------- */
@@ -1401,6 +1501,7 @@
     $("dialogue").classList.remove("show");
     dlgActive = false; dlgBeat = null;
     save();
+    maybeAnnounceWeekly(); // meeting Nonc Baptiste switches the weekly on
     setTimeout(maybePlayScene, 500); // chain any queued scenes
   }
   $("dialogue").addEventListener("click", dlgAdvance);
@@ -1566,7 +1667,14 @@
     const where = REF_LOCS[ref] ? REF_LOCS[ref].join(" · ") : "";
     let recLine = "", flavor = "";
     if (logged && rec) {
-      recLine = `<div class="g-rec">caught ×${rec.count} · best ${rec.max} lb</div>`;
+      const g = bestGradeOf(ref), idx = gradeIndexOf(ref);
+      recLine = `<div class="g-rec">best ${rec.max} lb — <b>${g ? g.name : ""}</b> · caught ×${rec.count}</div>`;
+      if (idx >= 0 && idx < D.GRADES.length - 1) {
+        const next = D.GRADES[idx + 1];
+        recLine += `<div class="g-nudge">${next.name} runs ${weightForGrade(ref, next.id).toFixed(1)} lb+</div>`;
+      } else if (idx === D.GRADES.length - 1) {
+        recLine += `<div class="g-nudge maxed">★ wall-hanger — the best this one gets</div>`;
+      }
       flavor = `<div class="g-flavor">${def.flavor[0]}</div>`;
     }
     const whereLabel = isLegend ? "legend of" : "found in";
@@ -1640,6 +1748,7 @@
       legendTotal: () => LEGEND_REFS.size,
       speciesCaughtCount: () => Object.keys(state.caught).length,
       speciesTotalCount: () => ALL_REFS.size,
+      gradeAtLeastCount: minId => gradeAtLeastCount(minId),
     };
   }
 
@@ -1849,6 +1958,7 @@
   ensureBounties(); // always have a few favors waiting at the landing
   updateStats();
   renderLog();
+  maybeAnnounceWeekly(); // announce this week's happening (once you've met Baptiste)
   checkTrotline(); // welcome-back gift if a line was soaking
   if (dailyAnnounce) setMsg(`New day on the bayou. <b>Today:</b> ${state.daily.text.toLowerCase().replace(/\s*today\s*$/i, "")}.`, "tap the water whenever");
   setTimeout(checkStory, 900); // opening scene / any pending beats once settled

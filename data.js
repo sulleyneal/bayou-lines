@@ -31,6 +31,19 @@
     { id: "night",  label: "night",        from: 0.82, hint: "Catfish own the dark. Bring patience and a thermos." },
   ];
 
+  /* ---------- SIZE GRADES ----------
+     Every fish gets graded against its OWN size band, so a 1-lb bluegill is a
+     wall-hanger and a 1-lb bass is a dink. `min` is the fraction of a species'
+     [w0,w1] band where that grade starts. Turns "caught it once" into a long,
+     gentle chase for a bigger one — no pressure, just a better story. */
+  const GRADES = [
+    { id: "dink",       name: "a dink",        min: 0.00, note: "Barely bent the rod. Everybody starts somewhere." },
+    { id: "keeper",     name: "a keeper",      min: 0.20, note: "Legal, edible, and honestly plenty." },
+    { id: "good",       name: "a good'un",     min: 0.44, note: "The kind you mention at the gas station, unprompted." },
+    { id: "trophy",     name: "a trophy",      min: 0.68, note: "Now that's a fish. Somebody's getting a phone call." },
+    { id: "wallhanger", name: "a wall-hanger", min: 0.88, note: "Mount it. Frame it. Hang it up by the P.E. stamp." },
+  ];
+
   /* ---------- SHARED FLAVOR (used when a location adds nothing special) ---------- */
   const GENERIC = {
     nibble: [
@@ -240,6 +253,69 @@
       flavor: [
         "Big drum. Hauled up like a sack of wet sediment, in the best way.",
         "Knuckle-headed and heavy. The marsh's structural engineer.",
+      ],
+    },
+    // ---- new species (Cycle 2): more of the water's regulars ----
+    warmouth: {
+      name: "Warmouth (Goggle-eye)", emoji: "🐟", w: [0.2, 1.4], value: 6, cls: "common",
+      flavor: [
+        "Goggle-eye. Looks perpetually offended, which, given the neighborhood, is fair.",
+        "A sunfish built like a little bulldog — red eye, bad attitude, good eating.",
+        "Ambushed the worm out of a cypress hollow. Rude, effective, respected.",
+      ],
+    },
+    yellowbass: {
+      name: "Yellow Bass (Barfish)", emoji: "🐠", w: [0.4, 2.2], value: 8, cls: "common",
+      time: ["dawn", "dusk"],
+      flavor: [
+        "Barfish. Runs in schools and hits like it's late for a meeting it called.",
+        "Smaller than a white bass and twice as convinced it isn't.",
+      ],
+    },
+    bullhead: {
+      name: "Brown Bullhead", emoji: "🐡", w: [0.3, 2.5], value: 6, cls: "common",
+      time: ["night", "dusk"],
+      flavor: [
+        "A pocket catfish: the full whiskered attitude, none of the permitting.",
+        "Bull-headed by name and temperament. Kids love 'em. So do you, quietly.",
+      ],
+    },
+    buffalo: {
+      name: "Smallmouth Buffalo", emoji: "🐟", w: [3.0, 26.0], value: 7, cls: "common",
+      flavor: [
+        "A buffalo, not a carp — say that to a local's face and mean it.",
+        "Came up like a manhole cover with fins. Bony, honest, and enormous.",
+      ],
+    },
+    carp: {
+      name: "Common Carp (Bugle-mouth Bass)", emoji: "🐟", w: [2.0, 30.0], value: 5, cls: "common",
+      flavor: [
+        "Bugle-mouth bass, they call it, generously. Fights like a hooked truck tire.",
+        "Invasive, unbothered, and somehow always a few pounds bigger than you guessed.",
+        "Rooted around the flat like it was doing its own site survey. Found your bait.",
+      ],
+    },
+    pickerel: {
+      name: "Chain Pickerel (Grass Pike)", emoji: "🐠", w: [1.0, 6.0], value: 8, cls: "common",
+      time: ["dawn", "golden"],
+      flavor: [
+        "Grass pike. All teeth and ambush, chained up in green and gold.",
+        "Came out of the grass sideways like a bad idea with fins. Landed clean.",
+      ],
+    },
+    spoonbill: {
+      name: "Paddlefish (Spoonbill)", emoji: "🥄", w: [15.0, 70.0], value: 12, cls: "trophy",
+      flavor: [
+        "A paddlefish — you snag these, you don't hook 'em. Filter-feeder older than the interstate.",
+        "That paddle's been mapping the river since before it had a name. Measured, admired, released.",
+      ],
+    },
+    mullet: {
+      name: "Striped Mullet", emoji: "🐟", w: [0.5, 4.0], value: 7, cls: "common",
+      time: ["day"],
+      flavor: [
+        "Jumped three times for no reason anybody's ever documented. Just likes it out there.",
+        "A mullet, leaping. Nobody knows why. The marsh keeps its small mysteries.",
       ],
     },
   };
@@ -461,6 +537,8 @@
         { ref: "redear", weight: 18 },
         { ref: "smallbass", weight: 22 },
         { ref: "bream", weight: 14 },
+        { ref: "warmouth", weight: 12 },
+        { ref: "bullhead", weight: 8 },
         { ref: "channelcat", weight: 5 },
       ],
       legendaries: [{ ref: "turtle", weight: 0.8 }],
@@ -487,6 +565,8 @@
         { ref: "redear", weight: 18 },
         { ref: "crappie", weight: 22 },
         { ref: "largemouth", weight: 20 },
+        { ref: "carp", weight: 12 },
+        { ref: "bullhead", weight: 8 },
         { ref: "channelcat", weight: 10 },
       ],
       legendaries: [{ ref: "bartholomew", weight: 0.5 }],
@@ -515,6 +595,8 @@
         { ref: "largemouth", weight: 20 },
         { ref: "channelcat", weight: 16 },
         { ref: "spottedgar", weight: 8 },
+        { ref: "warmouth", weight: 8 },
+        { ref: "carp", weight: 8 },
         { ref: "bowfin", weight: 4 },
       ],
       legendaries: [{ ref: "bartholomew", weight: 0.5 }],
@@ -543,6 +625,7 @@
         { ref: "crappie", weight: 16 },
         { ref: "channelcat", weight: 14 },
         { ref: "whitebass", weight: 8 },
+        { ref: "yellowbass", weight: 8 },
       ],
       legendaries: [{ ref: "cane", weight: 0.4 }],
       junk: ["plans", "lath", "cooler", "rod", "garmin", "propane", "decoy"],
@@ -569,6 +652,8 @@
         { ref: "longnosegar", weight: 12 },
         { ref: "crappie", weight: 16 },
         { ref: "channelcat", weight: 16 },
+        { ref: "warmouth", weight: 12 },
+        { ref: "pickerel", weight: 12 },
         { ref: "drum", weight: 10 },
       ],
       legendaries: [{ ref: "cypressking", weight: 0.45 }],
@@ -597,6 +682,10 @@
         { ref: "channelcat", weight: 16 },
         { ref: "drum", weight: 18 },
         { ref: "whitebass", weight: 14 },
+        { ref: "yellowbass", weight: 12 },
+        { ref: "buffalo", weight: 12 },
+        { ref: "carp", weight: 12 },
+        { ref: "spoonbill", weight: 5 },
         { ref: "longnosegar", weight: 10 },
       ],
       legendaries: [{ ref: "drumming", weight: 0.4 }],
@@ -624,6 +713,8 @@
         { ref: "striper", weight: 14 },
         { ref: "whitebass", weight: 16 },
         { ref: "channelcat", weight: 16 },
+        { ref: "yellowbass", weight: 12 },
+        { ref: "pickerel", weight: 10 },
         { ref: "crappie", weight: 14 },
       ],
       legendaries: [{ ref: "bigtex", weight: 0.4 }],
@@ -652,6 +743,10 @@
         { ref: "alligatorgar", weight: 8 },
         { ref: "longnosegar", weight: 14 },
         { ref: "drum", weight: 14 },
+        { ref: "buffalo", weight: 12 },
+        { ref: "carp", weight: 10 },
+        { ref: "pickerel", weight: 10 },
+        { ref: "spoonbill", weight: 6 },
       ],
       legendaries: [
         { ref: "grandfather", weight: 0.3 },
@@ -682,6 +777,7 @@
         { ref: "flounder", weight: 14 },
         { ref: "sheepshead", weight: 14 },
         { ref: "blackdrum", weight: 16 },
+        { ref: "mullet", weight: 14 },
         { ref: "channelcat", weight: 4 },
       ],
       legendaries: [{ ref: "bullred", weight: 0.4 }],
@@ -728,6 +824,10 @@
     { id: "grayghost", name: "The Gray Ghost", desc: "Meet the legend the whole bayou whispers about.", check: g => g.ghost && g.ghost.caught },
     { id: "guide20", name: "Field Notes", desc: "Log 20 different species in the Field Guide.", check: g => g.speciesCaughtCount() >= 20 },
     { id: "fullbox", name: "The Whole Tackle Box", desc: "Catch at least one of every species in the game.", check: g => g.speciesCaughtCount() >= g.speciesTotalCount() },
+    { id: "roughfish", name: "Nobody's Rough Fish But Mine", desc: "Land a carp, a buffalo, and a paddlefish.", check: g => g.caught["carp"] && g.caught["buffalo"] && g.caught["spoonbill"] },
+    { id: "wallhang1", name: "Wall-Hanger", desc: "Land a wall-hanger — a fish at the very top of its size.", check: g => g.gradeAtLeastCount("wallhanger") >= 1 },
+    { id: "trophy8", name: "A Whole Wall of 'Em", desc: "Land a trophy-or-better of 8 different species.", check: g => g.gradeAtLeastCount("trophy") >= 8 },
+    { id: "graded", name: "Knows His Fish", desc: "Bring 20 different species to a good'un or better.", check: g => g.gradeAtLeastCount("good") >= 20 },
   ];
 
   /* ============================================================
@@ -773,7 +873,35 @@
     boudreaux: { name: "Mr. Boudreaux",emoji: "🧓", blurb: "Runs the bait shop out of a cooler and a folding table. Knows the water cold." },
     darlene:   { name: "Miss Darlene", emoji: "👩", blurb: "Fries fish for the whole landing on Fridays. Pays in compliments and cash." },
     tee:       { name: "Tee-Claude",   emoji: "🧢", blurb: "Eleven years old, out-fishes everyone, and will not let you forget it." },
+    baptiste:  { name: "Nonc Baptiste", emoji: "👴", blurb: "Everybody's uncle. Keeps the whole almanac in his head and a weather eye on the water." },
   };
+
+  /* ============================================================
+     WEEKLY — one gentle happening at the landing, rotating by the
+     calendar week (independent of the real-world season). Nonc
+     Baptiste calls it. Perks are UPSIDE ONLY — never a penalty, per
+     the chill covenant. Keys off an ISO-week index in game.js.
+       payBias:  {group:[refs], mult}  — those fish sell for more this week
+       junkMult: number                — junk pays more this week
+       rareBoost: number               — nudge toward rarer fish
+       runBoost:  number               — seasonal runs hit a little harder
+     ============================================================ */
+  const WEEKLY = [
+    { id: "fryday",   title: "Fish-Fry Week", payBias: { group: ["crappie", "blackcrappie", "channelcat", "bluecat", "flathead"], mult: 1.25 },
+      blurb: "Miss Darlene's doin' a big fry Friday, so the sac-au-lait and the whiskered ones are payin' extra all week. Go on and fill the cooler." },
+    { id: "talltale", title: "Tall-Tale Week", rareBoost: 0.06,
+      blurb: "Tee-Claude's been braggin' again, so everybody's out tryin' to top him. Water's stirred up and the odd big one's showin' itself." },
+    { id: "highwater", title: "High Water", runBoost: 0.6,
+      blurb: "River came up a foot on that rain upstate. When the water moves, the fish move — the runs are stacked up thick right now." },
+    { id: "breambed", title: "The Bream Are Bedding", payBias: { group: ["bluegill", "redear", "bream", "warmouth"], mult: 1.3 },
+      blurb: "Full-moon beds are poppin'. Panfish are on 'em thick and the little ones are payin' like the big ones this week. Bring a cane pole." },
+    { id: "coldfront", title: "A Front Parked Over the Parish", rareBoost: 0.05, runBoost: 0.3,
+      blurb: "Pressure's been low and steady for days. Ask anybody who's fished a front — this is the good stuff. Don't waste it indoors." },
+    { id: "cleanup",  title: "Parish Cleanup Week", junkMult: 1.6,
+      blurb: "The parish put a little money up to pull junk out the water this week. Every piece you haul in pays better than usual. Do the bayou a favor." },
+    { id: "goodbait", title: "Boudreaux Restocked the Good Bait", rareBoost: 0.04,
+      blurb: "Fresh shipment come in on the good stuff. Boudreaux's grinnin' like a mule eatin' briars. The bite's been a touch better for everybody." },
+  ];
 
   /* ============================================================
      BOUNTY TEMPLATES — the game instantiates concrete bounties from
@@ -799,6 +927,10 @@
       flavor: "I want to name some I've never met! Bring me {N} kinds that aren't in your Field Guide yet — ones I've never gotten to name." },
     { id: "story",   giver: "boudreaux", kind: "legendary", reward: 350,
       flavor: "Word is there's a big old one in this water. Bring me a story worth telling and I'll make it worth your while." },
+    { id: "rough",   giver: "baptiste",  kind: "species", group: ["carp", "buffalo", "bullhead"], noun: "rough fish", min: 3, max: 6, perReward: 12, need: "metBaptiste",
+      flavor: "Nobody wants the carp and buffalo, cher, which is exactly why I do. Bring your old Nonc {N} of the rough fish and we'll talk." },
+    { id: "wallhang", giver: "tee",       kind: "grade", grade: "trophy", reward: 200, need: "metBaptiste",
+      flavor: "Betcha can't catch a REAL trophy. Not just big — a trophy for whatever it is. I'll know the difference. Prob'ly." },
   ];
 
   /* ============================================================
@@ -864,6 +996,8 @@
     { id: "garsummer", group: ["spottedgar", "longnosegar", "alligatorgar", "bowfin"], locs: ["blackbayou", "atchafalaya"], months: [6, 7], label: "the gar are rolling", report: "Gar are rolling on the surface in the heat. Primal stuff out in the basin." },
     { id: "redfishfall", group: ["redfish", "blackdrum"], locs: ["venice"], months: [8, 9, 10], label: "the bull red run", report: "Bull reds are schooling in the passes. The marsh is absolutely on fire." },
     { id: "specwinter", group: ["speck"], locs: ["venice"], months: [11, 0, 1], label: "the speckled trout bite", report: "Cold water has the specks bunched up tight under the diving birds." },
+    { id: "paddlerise", group: ["spoonbill"], locs: ["ouachita", "atchafalaya"], months: [2, 3], label: "the spoonbill are moving", report: "High spring water has the paddlefish drifting up the river. Rare, ancient, and worth every quiet hour." },
+    { id: "roughsummer", group: ["carp", "buffalo"], locs: ["darbonne", "ouachita", "atchafalaya", "lincoln"], months: [4, 5, 6], label: "the rough fish are rooting", report: "Warm shallows have the carp and buffalo tailing on the flats. Not glamorous. Very, very heavy." },
   ];
 
   /* ============================================================
@@ -907,12 +1041,21 @@
       "Every water from the pond to the gulf, somebody's hooked it once. Felt the whole rod bend double, heard the drag scream, and then… nothin'. Cut line. Every time.",
       "My daddy lost it on the D'Arbonne in '71. I lost it myself, twice. It don't get caught. It gets ENCOUNTERED.",
       "But you… you fish different. So I'll tell you what the old-timers told me: it shows for them that learn the water. All of it. Keep at it, and maybe it'll show for you." ] },
+    { id: "baptiste", who: "baptiste", ch: 2, title: "Nonc Baptiste, the Almanac", check: g => g.totalCatches() >= 40 || g.unlockedCount() >= 5, lines: [
+      "Ahh, so you the one everybody's talkin' about down here. Come sit by your Nonc Baptiste a minute. I don't fish so much no more — I keep the almanac.",
+      "See, the water runs on a calendar all its own. Every week the landing's got somethin' goin' — a fry, a run come up, a front settin' in. I keep track so y'all don't have to.",
+      "Check the board when you come round. I'll tell you what this week's about, and where the payin' fish are. Nothin' you gotta do — just a little somethin' extra, for showin' up.",
+      "And listen — them ugly fish nobody wants? The carp, the buffalo, the ol' spoonbill? Those are MY favorites. Bring your Nonc the rough ones. We'll get along fine." ] },
+    { id: "grades", who: "tee", ch: 2, title: "Tee-Claude Explains Size", check: g => g.gradeAtLeastCount("good") >= 3, lines: [
+      "Okay okay, you catch a lotta fish, big deal. But you catchin' the RIGHT size? A big bluegill ain't a big bass, but a GIANT bluegill? That's rarer, actually. Think about it.",
+      "Every fish got its own scale. A dink, a keeper, a good'un, a trophy, and — if you real lucky — a wall-hanger. That's the top. The biggest that kind gets.",
+      "Check your Field Guide. It'll tell you your best of each and what a wall-hanger takes. I got six already. You? …I'm not gonna say. But it ain't six." ] },
     { id: "deeper", who: "darlene", ch: 3, title: "What Darlene Knows", check: g => g.unlockedCount() >= 6, lines: [
       "Boudreaux told you about the Ghost, huh. I can see it on you. Gets in your head, that story.",
       "My mama swore it only showed on the big moons. Full and new, when the water's pulled tight and the whole bayou holds its breath.",
       "She also swore it's good luck just to see it. Bad luck to brag about it. So if you find it, baby — you be humble out there." ] },
   ];
 
-  window.DATA = { CONFIG, PHASES, GENERIC, S, L, JUNK, EQUIPMENT, LOCATIONS, ACHIEVEMENTS,
-    WEATHER, SEASONS, CHARACTERS, BOUNTY_TEMPLATES, CAMP, DAILY, RUNS, STORY, GHOST };
+  window.DATA = { CONFIG, PHASES, GRADES, GENERIC, S, L, JUNK, EQUIPMENT, LOCATIONS, ACHIEVEMENTS,
+    WEATHER, SEASONS, CHARACTERS, BOUNTY_TEMPLATES, CAMP, DAILY, RUNS, WEEKLY, STORY, GHOST };
 })();

@@ -20,6 +20,32 @@ const known = k => D.S[k] || D.L[k];
   (b.group || []).forEach(k => { if (!known(k)) errs.push(`bounty ${b.id}: bad species ref ${k}`); });
 });
 (D.WEATHER || []).forEach(w => { if (typeof w.biteSpeed !== "number") errs.push(`weather ${w.id}: missing biteSpeed`); });
+// size grades: ascending mins, first must start at 0
+(D.GRADES || []).forEach((g, i, a) => {
+  if (i === 0 && g.min !== 0) errs.push("grades: first grade must start at min 0");
+  if (i > 0 && g.min <= a[i - 1].min) errs.push(`grade ${g.id}: min not ascending`);
+});
+const GRADE_IDS = new Set((D.GRADES || []).map(g => g.id));
+// weekly happenings: perk species refs resolve, payBias has a mult
+(D.WEEKLY || []).forEach(w => {
+  if (w.payBias) {
+    if (typeof w.payBias.mult !== "number") errs.push(`weekly ${w.id}: payBias.mult missing`);
+    (w.payBias.group || []).forEach(k => { if (!known(k)) errs.push(`weekly ${w.id}: bad payBias ref ${k}`); });
+  }
+});
+// runs: species + location refs resolve
+(D.RUNS || []).forEach(r => {
+  (r.group || []).forEach(k => { if (!known(k)) errs.push(`run ${r.id}: bad ref ${k}`); });
+  (r.locs || []).forEach(id => { if (!D.LOCATIONS.find(l => l.id === id)) errs.push(`run ${r.id}: bad loc ${id}`); });
+});
+// bounty templates: grade kind names a real grade; need flag is recognized
+(D.BOUNTY_TEMPLATES || []).forEach(b => {
+  if (b.kind === "grade" && !GRADE_IDS.has(b.grade)) errs.push(`bounty ${b.id}: unknown grade ${b.grade}`);
+  if (b.need && b.need !== "metBaptiste") errs.push(`bounty ${b.id}: unknown need ${b.need}`);
+});
+// story + ghost beats reference real characters
+[...(D.STORY || []), D.GHOST && D.GHOST.ready, D.GHOST && D.GHOST.nearMiss, ...((D.GHOST && D.GHOST.finale) || [])]
+  .filter(Boolean).forEach(s => { if (!D.CHARACTERS[s.who]) errs.push(`beat ${s.id}: unknown who ${s.who}`); });
 
 // Fish art must produce clean SVG for every species/legendary — a malformed
 // body path (NaN coords) renders wrong AND spams the console, so catch it here.

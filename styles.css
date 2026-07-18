@@ -556,6 +556,19 @@ h1 em{font-style:italic;font-weight:400;color:var(--lantern)}
 .daily-feat{font-size:10.5px;color:var(--cream-dim);margin-top:9px;line-height:1.5;border-top:1px dashed rgba(232,193,112,.18);padding-top:8px}
 .daily-feat b{color:var(--accent)}
 
+/* weekly happening banner (Nonc Baptiste's almanac) */
+.weeklyCard{padding:13px 15px;border-radius:14px;margin-bottom:12px;
+  border:1px solid rgba(127,176,105,.4);background:linear-gradient(180deg,rgba(127,176,105,.12),rgba(127,176,105,.03))}
+.weeklyCard .b-giver{color:var(--good)}
+.weeklyCard .b-reward{color:var(--good)}
+.wk-blurb{font-size:11px;color:var(--cream);font-style:italic;line-height:1.55;margin:8px 0 0}
+.wk-perk{font-size:11px;color:var(--good);margin-top:8px;letter-spacing:.02em}
+.wk-by{font-size:10px;color:var(--cream-dim);margin-top:7px;text-align:right}
+
+/* Field Guide size-grade nudge */
+.g-nudge{font-size:10px;color:var(--cream-dim);margin-top:2px;letter-spacing:.02em}
+.g-nudge.maxed{color:var(--lantern)}
+
 /* ============ TACKLE BOX (achievements) ============ */
 .achGrid{display:flex;flex-direction:column;gap:8px}
 .achRow{

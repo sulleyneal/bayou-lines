@@ -27,6 +27,8 @@
     trout:    { bodyH: 15, tailBaseH: 6, backPeak: 0.42, bulge: 0.85, tail: "fork", tailLen: 16, tailSpread: 12, dorsal: { x0: 0.36, x1: 0.56, h: 8 }, adipose: true },
     flat:     { bodyH: 26, tailBaseH: 7, backPeak: 0.5, bulge: 1.0, tail: "fan", tailLen: 12, tailSpread: 16, flat: true },
     deep:     { bodyH: 24, tailBaseH: 6, backPeak: 0.4, bulge: 0.9, tail: "fork", tailLen: 14, tailSpread: 13, dorsal: { x0: 0.3, x1: 0.66, h: 11 } },
+    pike:     { bodyH: 11, tailBaseH: 6, backPeak: 0.52, bulge: 0.74, tail: "fork", tailLen: 15, tailSpread: 11, snout: 8, dorsal: { x0: 0.60, x1: 0.80, h: 7 } },
+    paddle:   { bodyH: 13, tailBaseH: 7, backPeak: 0.42, bulge: 0.72, tail: "fork", tailLen: 18, tailSpread: 15, snout: 26, dorsal: { x0: 0.62, x1: 0.78, h: 7 } },
   };
 
   // ---------- per-species look ----------
@@ -56,6 +58,15 @@
     flounder:    { arch: "flat", back: "#7a6a4a", belly: "#b9ad8a", fin: "#5f5238", pattern: "mottle", pat: "#4c4128" },
     sheepshead:  { arch: "deep", back: "#9a9a8e", belly: "#e4e2d6", fin: "#5a5a50", pattern: "barred", pat: "#2e2e2a" },
     blackdrum:   { arch: "deep", back: "#7c7c74", belly: "#cfcdc2", fin: "#56564f", pattern: "barred", pat: "#3a3a36" },
+    // ---- new (Cycle 2) ----
+    warmouth:    { arch: "panfish", back: "#6a6340", belly: "#c7a558", fin: "#4a4630", pattern: "mottle", pat: "#3e3a24", earSpot: "#7a2f22", cheek: "#8a7a48" },
+    yellowbass:  { arch: "silver", back: "#b8a24a", belly: "#efe6c0", fin: "#8a7838", pattern: "stripes", pat: "#4a4224" },
+    bullhead:    { arch: "catfish", back: "#5a4a34", belly: "#c9b184", fin: "#463a28", pattern: "none" },
+    buffalo:     { arch: "deep", back: "#6b6656", belly: "#bcb6a2", fin: "#4c4a40", pattern: "none" },
+    carp:        { arch: "drum", back: "#8a6a3a", belly: "#d8c088", fin: "#6a5228", pattern: "speckle", pat: "#5a4526", barbels: true },
+    pickerel:    { arch: "pike", back: "#5c6a3a", belly: "#cfc88a", fin: "#46502c", pattern: "mottle", pat: "#2f3a1e" },
+    spoonbill:   { arch: "paddle", back: "#7a8590", belly: "#d2d8d6", fin: "#5c6670", pattern: "none" },
+    mullet:      { arch: "silver", back: "#7a8288", belly: "#eef1ef", fin: "#5c646a", pattern: "stripes", pat: "#66707a" },
     // legendaries — base look, larger, with a golden cast
     turtle:      { arch: "panfish", back: "#566b3f", belly: "#9a8a4a", fin: "#3e4f2f", pattern: "mottle", pat: "#3a4528", turtle: true },
     bartholomew: { arch: "bass", back: "#3e6038", belly: "#e6dd95", fin: "#2c4325", pattern: "stripe1", pat: "#202e19", legend: true, big: true },

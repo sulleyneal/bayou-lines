@@ -61,15 +61,41 @@ It found two real defects, both now fixed:
 
 ---
 
+### Cycle 2 — Mastery layer + new content + weekly beat ✅ (verified, checker pending)
+- **Size grades.** Every fish is graded against its *own* size band — a dink,
+  a keeper, a good'un, a trophy, or a wall-hanger — so a giant bluegill outranks
+  a dinky bass. Derived purely from `records[key].max` (zero new save state, so
+  old saves get grades for free). The Field Guide shows your best grade + the
+  weight the next grade takes ("a trophy runs 1.2 lb+"); the catch card calls out
+  "▲ your best yet — a trophy" when you beat your size for a species. Turns
+  "caught it once" into a weeks-long, no-pressure chase. Four new achievements
+  (wall-hanger, a trophy-of-8, a good'un-of-20, the rough-fish trio).
+- **New content.** Eight new in-voice species (warmouth, yellow bass, brown
+  bullhead, smallmouth buffalo, common carp, chain pickerel, paddlefish/spoonbill,
+  striped mullet) with two new fish-art archetypes (`pike`, `paddle`), spread
+  across every water; two new seasonal runs (spring spoonbill rise, summer rough
+  fish). All render clean (validated).
+- **Weekly beat + a new regular.** Nonc Baptiste arrives around week two and
+  opens "this week at the landing" — a happening that rotates by the *calendar
+  week*, independent of the real-world season, so day 14 shows something day 7
+  didn't (Fish-Fry Week, the Bream Are Bedding, High Water, Parish Cleanup…).
+  Perks are upside-only (per the chill covenant) and gated behind meeting him.
+  He also posts rough-fish and "catch a real trophy" bounties.
+
+Verification: `test/verify-c2.js` — 9/9 (grades in the Guide, next-grade nudge,
+the weekly banner, the grade-upgrade note in live play, zero console errors).
+`test/verify-c1.js` still 17/17 (migration unaffected). `node validate.js` clean
+(now also checks grades ordering, weekly/run refs, grade bounties, beat authors).
+
+---
+
 ## Biggest known gap right now
 
-Week-two depth (Cycle 2): there's still little that *first appears* around day
-14. Next: a per-species size-grade mastery layer (turns "caught it once" into a
-long, gentle chase), new in-voice content, and a weekly landing beat that
-rotates independent of the real-world season.
+Postgame (Cycle 3): after the Gray Ghost the arc still stops. Next: a hidden
+10th water that opens only once you've met the Ghost, a Master Angler ledger
+(land a wall-hanger of every species — a multi-week completion arc built on the
+new grade system), and a couple of post-Ghost condition-gated legends.
 
 ## Next up
-- Cycle 2 — mastery layer + new content + weekly beat
 - Cycle 3 — postgame (hidden 10th water, Master Angler ledger, post-Ghost legends)
-- Ongoing — Lighthouse PWA + frame-pacing measurement, extend `validate.js`,
-  fresh checker each cycle before merge.
+- Ongoing — Lighthouse PWA + frame-pacing measurement, fresh checker each cycle.

@@ -20,6 +20,27 @@ const known = k => D.S[k] || D.L[k];
   (b.group || []).forEach(k => { if (!known(k)) errs.push(`bounty ${b.id}: bad species ref ${k}`); });
 });
 (D.WEATHER || []).forEach(w => { if (typeof w.biteSpeed !== "number") errs.push(`weather ${w.id}: missing biteSpeed`); });
+
+// Fish art must produce clean SVG for every species/legendary — a malformed
+// body path (NaN coords) renders wrong AND spams the console, so catch it here.
+// FishArt.svg is pure string math (no DOM), so it runs fine under node.
+try {
+  require("./fishart.js");
+  const FA = window.FishArt;
+  if (FA) {
+    const known = k => D.S[k] || D.L[k];
+    FA.refs().forEach(ref => {
+      const s = FA.svg(ref);
+      if (!s) errs.push(`fishart ${ref}: svg() returned nothing`);
+      else if (/NaN|undefined/.test(s)) errs.push(`fishart ${ref}: bad SVG (NaN/undefined coords)`);
+      if (!known(ref)) errs.push(`fishart ${ref}: art for a species not in S/L`);
+    });
+    // every catchable species/legendary should have art (silhouettes need it)
+    [...Object.keys(D.S), ...Object.keys(D.L)].forEach(k => {
+      if (!FA.has(k)) errs.push(`fishart: missing art for ${k}`);
+    });
+  } else errs.push("fishart: window.FishArt not exposed");
+} catch (e) { errs.push("fishart: threw — " + e.message); }
 console.log(`locations:${D.LOCATIONS.length} species:${Object.keys(D.S).length} legendaries:${Object.keys(D.L).length} junk:${Object.keys(D.JUNK).length} achievements:${D.ACHIEVEMENTS.length}`);
 console.log(errs.length ? "ERRORS:\n" + errs.join("\n") : "OK — all refs resolve.");
 process.exit(errs.length ? 1 : 0);

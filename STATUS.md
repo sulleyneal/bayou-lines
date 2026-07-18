@@ -47,6 +47,18 @@ Verification: `test/verify-c1.js` (headless) — 17/17 (cold-open timing, first
 card is a fish, coach appears, chip shown; migration field-by-field).
 `node validate.js` clean.
 
+**Fresh-context checker ran and passed all four claims** (cold open 4.6s, saves
+22/22 fields intact, graphics look good, no regressions / zero uncaught errors).
+It found two real defects, both now fixed:
+- **Fish-art `NaN` (pre-existing, since the original art commit).** Every fish
+  body path emitted `NaN` because the archetype `belly` *bulge ratio* collided
+  with the per-species `belly` *color* through `Object.assign` — 156 console
+  errors/session, and it silently broke this cycle's belly-shadow. Renamed the
+  archetype field to `bulge`. Now **0 NaN, 0 console errors** across all 33 fish,
+  and the bodies actually render round. `validate.js` now asserts clean fish SVG
+  so this blind spot can't reopen.
+- **Double-"today"** in the new-day line ("Today: land 5 panfish today") — fixed.
+
 ---
 
 ## Biggest known gap right now

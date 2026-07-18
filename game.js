@@ -1850,7 +1850,7 @@
   updateStats();
   renderLog();
   checkTrotline(); // welcome-back gift if a line was soaking
-  if (dailyAnnounce) setMsg(`New day on the bayou. <b>Today:</b> ${state.daily.text.toLowerCase()}.`, "tap the water whenever");
+  if (dailyAnnounce) setMsg(`New day on the bayou. <b>Today:</b> ${state.daily.text.toLowerCase().replace(/\s*today\s*$/i, "")}.`, "tap the water whenever");
   setTimeout(checkStory, 900); // opening scene / any pending beats once settled
   // A returning player should land exactly where they left off.
   if (state.stats.catches || state.stats.junk) {

@@ -10,21 +10,23 @@
 
   // ---------- body archetypes (fish faces LEFT: nose small-x, tail large-x) ----------
   // bodyH: half-height of body · tailBaseH: half-height where tail meets body
-  // backPeak: 0..1 along body where the back is highest · belly: belly bulge factor
+  // backPeak: 0..1 along body where the back is highest · bulge: belly bulge factor
+  //   (NB: archetype 'bulge' is a ratio; per-species 'belly' below is a color —
+  //    kept distinct on purpose so Object.assign can't collide them)
   // tail: 'fork' | 'round' | 'fan' · snout: extra nose length · barbels: catfish whiskers
   // dorsal: {x0,x1,h} back fin span · longDorsal: bowfin-style ribbon
   const ARCH = {
-    panfish:  { bodyH: 23, tailBaseH: 7, backPeak: 0.44, belly: 1.0, tail: "fork", tailLen: 16, tailSpread: 15, dorsal: { x0: 0.30, x1: 0.66, h: 11 }, anal: true },
-    bass:     { bodyH: 17, tailBaseH: 6, backPeak: 0.40, belly: 0.85, tail: "fork", tailLen: 18, tailSpread: 15, dorsal: { x0: 0.34, x1: 0.64, h: 9 }, mouth: 6 },
-    catfish:  { bodyH: 16, tailBaseH: 6, backPeak: 0.34, belly: 0.7, tail: "fork", tailLen: 17, tailSpread: 13, barbels: true, blunt: 5, dorsal: { x0: 0.30, x1: 0.40, h: 9 } },
-    gar:      { bodyH: 9,  tailBaseH: 5, backPeak: 0.52, belly: 0.5, tail: "round", tailLen: 13, tailSpread: 9, snout: 22, dorsal: { x0: 0.66, x1: 0.80, h: 7 } },
-    bowfin:   { bodyH: 14, tailBaseH: 8, backPeak: 0.5, belly: 0.6, tail: "round", tailLen: 12, tailSpread: 11, longDorsal: true },
-    drum:     { bodyH: 22, tailBaseH: 6, backPeak: 0.32, belly: 0.78, tail: "fork", tailLen: 15, tailSpread: 13, dorsal: { x0: 0.30, x1: 0.66, h: 10 }, humped: true },
-    silver:   { bodyH: 15, tailBaseH: 6, backPeak: 0.40, belly: 0.8, tail: "fork", tailLen: 18, tailSpread: 16, dorsal: { x0: 0.34, x1: 0.6, h: 8 } },
-    redfish:  { bodyH: 16, tailBaseH: 6, backPeak: 0.36, belly: 0.78, tail: "fork", tailLen: 17, tailSpread: 13, dorsal: { x0: 0.32, x1: 0.62, h: 9 } },
-    trout:    { bodyH: 15, tailBaseH: 6, backPeak: 0.42, belly: 0.85, tail: "fork", tailLen: 16, tailSpread: 12, dorsal: { x0: 0.36, x1: 0.56, h: 8 }, adipose: true },
-    flat:     { bodyH: 26, tailBaseH: 7, backPeak: 0.5, belly: 1.0, tail: "fan", tailLen: 12, tailSpread: 16, flat: true },
-    deep:     { bodyH: 24, tailBaseH: 6, backPeak: 0.4, belly: 0.9, tail: "fork", tailLen: 14, tailSpread: 13, dorsal: { x0: 0.3, x1: 0.66, h: 11 } },
+    panfish:  { bodyH: 23, tailBaseH: 7, backPeak: 0.44, bulge: 1.0, tail: "fork", tailLen: 16, tailSpread: 15, dorsal: { x0: 0.30, x1: 0.66, h: 11 }, anal: true },
+    bass:     { bodyH: 17, tailBaseH: 6, backPeak: 0.40, bulge: 0.85, tail: "fork", tailLen: 18, tailSpread: 15, dorsal: { x0: 0.34, x1: 0.64, h: 9 }, mouth: 6 },
+    catfish:  { bodyH: 16, tailBaseH: 6, backPeak: 0.34, bulge: 0.7, tail: "fork", tailLen: 17, tailSpread: 13, barbels: true, blunt: 5, dorsal: { x0: 0.30, x1: 0.40, h: 9 } },
+    gar:      { bodyH: 9,  tailBaseH: 5, backPeak: 0.52, bulge: 0.5, tail: "round", tailLen: 13, tailSpread: 9, snout: 22, dorsal: { x0: 0.66, x1: 0.80, h: 7 } },
+    bowfin:   { bodyH: 14, tailBaseH: 8, backPeak: 0.5, bulge: 0.6, tail: "round", tailLen: 12, tailSpread: 11, longDorsal: true },
+    drum:     { bodyH: 22, tailBaseH: 6, backPeak: 0.32, bulge: 0.78, tail: "fork", tailLen: 15, tailSpread: 13, dorsal: { x0: 0.30, x1: 0.66, h: 10 }, humped: true },
+    silver:   { bodyH: 15, tailBaseH: 6, backPeak: 0.40, bulge: 0.8, tail: "fork", tailLen: 18, tailSpread: 16, dorsal: { x0: 0.34, x1: 0.6, h: 8 } },
+    redfish:  { bodyH: 16, tailBaseH: 6, backPeak: 0.36, bulge: 0.78, tail: "fork", tailLen: 17, tailSpread: 13, dorsal: { x0: 0.32, x1: 0.62, h: 9 } },
+    trout:    { bodyH: 15, tailBaseH: 6, backPeak: 0.42, bulge: 0.85, tail: "fork", tailLen: 16, tailSpread: 12, dorsal: { x0: 0.36, x1: 0.56, h: 8 }, adipose: true },
+    flat:     { bodyH: 26, tailBaseH: 7, backPeak: 0.5, bulge: 1.0, tail: "fan", tailLen: 12, tailSpread: 16, flat: true },
+    deep:     { bodyH: 24, tailBaseH: 6, backPeak: 0.4, bulge: 0.9, tail: "fork", tailLen: 14, tailSpread: 13, dorsal: { x0: 0.3, x1: 0.66, h: 11 } },
   };
 
   // ---------- per-species look ----------
@@ -75,7 +77,7 @@
     const startX = a.snout ? 12 + a.snout : (a.blunt ? 12 + a.blunt : 14); // where the body proper begins
     const tx = 96, my = MY, H = a.bodyH, tbh = a.tailBaseH;
     const bpx = startX + (tx - startX) * a.backPeak;
-    const topPk = my - H, bly = my + H * a.belly;
+    const topPk = my - H, bly = my + H * a.bulge;
     const noseTipX = 12, noseY = my - (a.mouth ? a.mouth * 0.3 : 0);
     // top: nose -> back peak -> tail base top ; bottom back to nose
     return `M ${noseTipX} ${r2(noseY)}

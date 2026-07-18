@@ -10,6 +10,7 @@ for (const l of D.LOCATIONS) {
   for (const k of l.junk) if (!D.JUNK[k]) errs.push(`${l.id}: missing junk ${k}`);
   if (l.unlock && l.unlock.milestone && !D.LOCATIONS.find(x => x.id === l.unlock.milestone.at))
     errs.push(`${l.id}: bad milestone.at ${l.unlock.milestone.at}`);
+  if (l.unlock && l.unlock.ghost && l.unlock.ghost !== true) errs.push(`${l.id}: unlock.ghost must be true`);
 }
 for (const e of D.EQUIPMENT.boat) if (typeof e.tier !== "number") errs.push(`boat tier missing: ${e.name}`);
 // new content structures
@@ -61,9 +62,10 @@ try {
       else if (/NaN|undefined/.test(s)) errs.push(`fishart ${ref}: bad SVG (NaN/undefined coords)`);
       if (!known(ref)) errs.push(`fishart ${ref}: art for a species not in S/L`);
     });
-    // every catchable species/legendary should have art (silhouettes need it)
+    // every catchable species/legendary should have art (silhouettes need it),
+    // except the deliberately-emoji gag catches flagged noArt (e.g. the cryptid)
     [...Object.keys(D.S), ...Object.keys(D.L)].forEach(k => {
-      if (!FA.has(k)) errs.push(`fishart: missing art for ${k}`);
+      if (!FA.has(k) && !((D.S[k] || D.L[k]).noArt)) errs.push(`fishart: missing art for ${k}`);
     });
   } else errs.push("fishart: window.FishArt not exposed");
 } catch (e) { errs.push("fishart: threw — " + e.message); }

@@ -89,13 +89,38 @@ the weekly banner, the grade-upgrade note in live play, zero console errors).
 
 ---
 
+### Cycle 3 — Postgame: 10th water + Master Angler ledger + post-Ghost legends ✅ (verified, checker pending)
+- **A hidden 10th water — Honey Island Swamp.** Off the map entirely until you've
+  stood with the Gray Ghost; then Boudreaux lets you in on where he came from and
+  it appears (a reveal, not a greyed-out teaser). Its own black-water palette and
+  mossy-cypress scenery, a "greatest hits of the weird" roster (gars, flathead,
+  buffalo, spoonbill, pickerel), and two post-Ghost legends: **the Honey Island
+  Haint** (a pale kin of the Ghost) and **the Honey Island Monster** (the swamp
+  cryptid, briefly "met" and released — a 🐾 gag in the voice).
+- **The Master Angler's Book.** The postgame long arc: land a *wall-hanger* of
+  every one of the 31 species — built entirely on the Cycle-2 grade system, so it
+  costs no new save state beyond the milestones paid. A new panel shows your
+  progress and, for each fish, the exact weight a wall-hanger takes ("Alligator
+  Gar needs 86.0 lb+ · best 20 lb"), with the biggest gaps sorted to the top.
+  Milestone rewards at 5/10/20; finishing the whole book makes you a Master
+  Angler (10k ₿ + a gilded photo frame on every future catch). Baptiste hands you
+  the book after the Ghost. Six new achievements.
+
+Verification: `test/verify-c3.js` — 12/12 (swamp hidden pre-Ghost / revealed
+post-Ghost, travel + fish it clean, Haint art clean, ledger display + sort +
+completion → Master Angler flag). C1 17/17 and C2 9/9 still green (no regression).
+`node validate.js` clean (10 waters, 31 species, 12 legendaries, 43 achievements).
+
+---
+
 ## Biggest known gap right now
 
-Postgame (Cycle 3): after the Gray Ghost the arc still stops. Next: a hidden
-10th water that opens only once you've met the Ghost, a Master Angler ledger
-(land a wall-hanger of every species — a multi-week completion arc built on the
-new grade system), and a couple of post-Ghost condition-gated legends.
+All three headline gaps (cold open, week two, postgame) now have shipped systems.
+Next pass: **prove the whole bar end-to-end** — a Lighthouse PWA audit, measured
+frame pacing through a full cast-fight-land on a throttled mobile profile, and a
+fresh cold→day-14→postgame checker playthrough — then close whatever it finds.
 
 ## Next up
-- Cycle 3 — postgame (hidden 10th water, Master Angler ledger, post-Ghost legends)
-- Ongoing — Lighthouse PWA + frame-pacing measurement, fresh checker each cycle.
+- Merge Cycle 3 after its checker passes.
+- Ongoing — Lighthouse PWA + throttled frame-pacing measurement; a full-bar
+  checker sweep; polish whatever it surfaces.

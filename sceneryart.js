@@ -39,6 +39,8 @@
     toledo:      [["dead", 12, 15, 0.6, 50], ["dead", 22, 11, 0.45, 49], ["dead", 33, 17, 0.8, 51], ["dead", 64, 13, 0.55, 49], ["dead", 74, 18, 0.85, 51], ["dead", 86, 12, 0.5, 49]],
     atchafalaya: [["cypressMoss", 2, 28, 0.95], ["cypressMoss", 11, 24, 0.78], ["cypressMoss", 22, 17, 0.55], ["cypress", 33, 12, 0.4], ["cypressMoss", 82, 26, 0.92], ["cypressMoss", 92, 19, 0.66], ["dead", 50, 12, 0.5, 50]],
     venice:      [["grass", 2, 13, 0.85, 51], ["grass", 88, 15, 0.9, 50], ["grass", 44, 10, 0.7, 52], ["rig", 60, 11, 0.32], ["rig", 28, 7, 0.26], ["bush", 16, 4, 0.25]],
+    // the postgame swamp — heavy moss, dead timber, a wall of cypress
+    honeyisland: [["cypressMoss", 1, 30, 0.97], ["cypressMoss", 9, 26, 0.85], ["cypressMoss", 18, 20, 0.62], ["dead", 28, 14, 0.5, 50], ["cypressMoss", 80, 28, 0.95], ["cypressMoss", 90, 22, 0.72], ["dead", 66, 15, 0.55, 51], ["willow", 40, 12, 0.4]],
   };
 
   function svg(locId, opts) {

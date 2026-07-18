@@ -395,6 +395,25 @@
         "The whole marsh seems to go quiet for him. You'll understand when you see it.",
       ],
     },
+    // ---- post-Ghost legends: they only surface once you've met the Ghost,
+    //      in the swamp he came from (see LOCATIONS: honeyisland) ----
+    haint: {
+      name: "the Honey Island Haint", emoji: "🐟", w: [40.0, 78.0], value: 60, cls: "legendary",
+      legendary: true, time: ["night"],
+      flavor: [
+        "Pale as the Ghost and half again as strange. Kin, the old-timers say, and they won't say more.",
+        "It rose in the moonlight, looked at you the way the Ghost did, and slid back under. Released — you know the rule by now.",
+        "A white shape the size of a jon boat. You held it a breath, then gave it back to the black water it belongs to.",
+      ],
+    },
+    monster: {
+      name: "the Honey Island Monster (briefly)", emoji: "🐾", w: [300.0, 700.0], value: 0, cls: "common",
+      legendary: true, ghost: false, noArt: true, // it's a cryptid, not a fish — shows as an emoji, by design
+      flavor: [
+        "You did not catch the Honey Island Monster. You will, however, be telling people you did. Both are true.",
+        "Something enormous and hairy took the whole rig, made unhurried eye contact, and left. You've decided not to think about it.",
+      ],
+    },
     // the white whale — not bound to any water; only reachable through the chase (S5)
     grayghost: {
       name: "the Gray Ghost", emoji: "🐋", w: [62.0, 96.0], value: 0, cls: "legendary",
@@ -463,6 +482,8 @@
     decoy:     { name: "A duck decoy", emoji: "🦆", flavor: "It has seen things. It is keeping the receipts." },
     netfloat:  { name: "A crab-trap float", emoji: "🟠", flavor: "Cyc string still attached. Drifted up from the coast to say hello." },
     rod:       { name: "Someone else's snapped rod tip", emoji: "🎣", flavor: "Ultralight. They hooked something they shouldn't have. You can relate." },
+    pirogue:   { name: "A lost pirogue paddle", emoji: "🛶", flavor: "Hand-carved, worn smooth. Somebody poled this swamp a long time before you found it." },
+    gamecam:   { name: "A game camera, still blinking", emoji: "📷", flavor: "SD card's full. You are absolutely not going to look at what's on it. Put it back." },
   };
 
   /* ============================================================
@@ -783,6 +804,41 @@
       legendaries: [{ ref: "bullred", weight: 0.4 }],
       junk: ["netfloat", "cooler", "propane", "decoy", "croc", "boot", "phone"],
     },
+    {
+      // The postgame water. Hidden from the map until you've met the Gray Ghost;
+      // then the regulars finally let you in on where he came from.
+      id: "honeyisland",
+      name: "Honey Island Swamp",
+      blurb: "the Ghost's own water · they don't put this one on the map",
+      unlock: { ghost: true }, // only appears once state.ghost.caught
+      accent: "#5fb0a6",
+      palette: {
+        sky: sky("#232c3a", "#33404a", "#4a5546", "#6a6e54"),
+        water: wtr("#2a352e", "#153a34", "#06140f"),
+        cypress: "#060f0c",
+      },
+      idle: [
+        "The swamp goes quiet the way a room does when the story turns true. You keep a line wet anyway.",
+        "Black water, no bottom anybody's found, and the feeling of being politely watched.",
+        "Nothing on any map led you here. The Ghost did. That's the only permit this water honors.",
+        "Somewhere back in the moss, something rolls that's too big to name out loud. You let it stay unnamed.",
+      ],
+      species: [
+        { ref: "bowfin", weight: 22 },
+        { ref: "spottedgar", weight: 16 },
+        { ref: "longnosegar", weight: 14 },
+        { ref: "alligatorgar", weight: 12 },
+        { ref: "flathead", weight: 14 },
+        { ref: "buffalo", weight: 12 },
+        { ref: "pickerel", weight: 12 },
+        { ref: "spoonbill", weight: 8 },
+      ],
+      legendaries: [
+        { ref: "haint", weight: 0.6 },
+        { ref: "monster", weight: 0.4 },
+      ],
+      junk: ["pirogue", "gamecam", "hymnal", "decoy", "phone", "rcgauge", "boot"],
+    },
   ];
 
   /* ============================================================
@@ -828,6 +884,11 @@
     { id: "wallhang1", name: "Wall-Hanger", desc: "Land a wall-hanger — a fish at the very top of its size.", check: g => g.gradeAtLeastCount("wallhanger") >= 1 },
     { id: "trophy8", name: "A Whole Wall of 'Em", desc: "Land a trophy-or-better of 8 different species.", check: g => g.gradeAtLeastCount("trophy") >= 8 },
     { id: "graded", name: "Knows His Fish", desc: "Bring 20 different species to a good'un or better.", check: g => g.gradeAtLeastCount("good") >= 20 },
+    { id: "offmap", name: "Off the Map", desc: "Find the water that isn't on any map.", check: g => g.hasUnlocked("honeyisland") },
+    { id: "haint", name: "Kin of the Ghost", desc: "Meet the Honey Island Haint.", check: g => g.caught["haint"] },
+    { id: "monster", name: "We Don't Talk About That", desc: "Briefly 'meet' the Honey Island Monster.", check: g => g.caught["monster"] },
+    { id: "recordbook", name: "The Record Book", desc: "Land a wall-hanger of 20 different species.", check: g => g.wallhangerCount() >= 20 },
+    { id: "masterangler", name: "Master Angler", desc: "Land a wall-hanger of every species in the game. The whole book.", check: g => g.wallhangerCount() >= g.ledgerTotal() },
   ];
 
   /* ============================================================
@@ -1054,6 +1115,15 @@
       "Boudreaux told you about the Ghost, huh. I can see it on you. Gets in your head, that story.",
       "My mama swore it only showed on the big moons. Full and new, when the water's pulled tight and the whole bayou holds its breath.",
       "She also swore it's good luck just to see it. Bad luck to brag about it. So if you find it, baby — you be humble out there." ] },
+    // ---- postgame (Chapter 5): opens only after the Gray Ghost is met ----
+    { id: "swampreveal", who: "boudreaux", ch: 5, title: "Where He Came From", check: g => g.ghost && g.ghost.caught, lines: [
+      "You met him. You actually stood with the Ghost and let him go. That changes what an old man can tell you.",
+      "There's a water we don't put on the map. Honey Island. Deep swamp, black as chicory coffee, and it's where the old ones go. The Ghost came out of there — and he ain't the strangest thing in it.",
+      "It'll show itself to you now. Check your map. Go easy, go respectful — and tell your Nonc Baptiste I said it's time you saw the book." ] },
+    { id: "ledger", who: "baptiste", ch: 5, title: "The Master Angler's Book", check: g => g.ghost && g.ghost.caught, lines: [
+      "So Boudreaux sent you for the book. Bon. Sit down.",
+      "Any fool can catch a fish, cher. Takes a whole life to catch the BIGGEST of every kind — a true wall-hanger of each. That's the Master Angler's book. Near nobody finishes it.",
+      "It's already in your Field Guide, quiet-like: every fish, your best, and what a wall-hanger takes. Chase it slow. It'll outlast a lotta seasons — and that, right there, is the whole point of it." ] },
   ];
 
   window.DATA = { CONFIG, PHASES, GRADES, GENERIC, S, L, JUNK, EQUIPMENT, LOCATIONS, ACHIEVEMENTS,

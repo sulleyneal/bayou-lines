@@ -38,6 +38,7 @@
     ghost: { caught: false, nearMiss: false, sighted: false, toldReady: false }, // the Gray Ghost chase
     trotline: { set: false, ts: 0 }, // opt-in idle line
     weekly: { lastWeek: "" }, // which weekly happening we last announced
+    master: { awarded: [] }, // Master Angler ledger milestones already paid
     log: [],
     settings: { muted: false, volume: 0.6 },
   };
@@ -46,7 +47,7 @@
      Everything but the transient `phase` is saved. Loading deep-merges
      onto defaults so old saves survive new fields in future versions. */
   const SAVE_FIELDS = ["locationId", "unlocked", "bucks", "equip", "stats",
-    "caught", "records", "legends", "flags", "flags2", "achievements", "bounties", "camp", "daily", "stock", "story", "ghost", "trotline", "weekly", "log", "settings"];
+    "caught", "records", "legends", "flags", "flags2", "achievements", "bounties", "camp", "daily", "stock", "story", "ghost", "trotline", "weekly", "master", "log", "settings"];
   let saveLocked = false; // true during reset, so nothing re-saves stale data
 
   const SAVE_VERSION = 3;
@@ -477,8 +478,36 @@
     save();
     checkAchievements();
     setMsg("Back to the water whenever you're ready. No rush. Genuinely none.");
+    checkMaster();
     checkStory();
     nudgeComeBack();
+  }
+
+  /* ---------- MASTER ANGLER LEDGER panel ---------- */
+  function renderLedger() {
+    const total = ledgerSpecies().length, done = wallhangerCount(), top = D.GRADES.length - 1;
+    $("ledgerCount").textContent = done + " of " + total;
+    const complete = done >= total;
+    const rows = ledgerSpecies().map(k => {
+      const def = D.S[k], rec = state.records[k], gi = gradeIndexOf(k);
+      const isWall = gi === top;
+      const art = (window.FishArt && window.FishArt.has(k)) ? window.FishArt.svg(k, { w: 42 }) : (def.emoji || "🐟");
+      let right;
+      if (isWall) right = `<span class="ml-done">★ wall-hanger</span>`;
+      else if (rec && rec.max) right = `<span class="ml-need">needs ${weightForGrade(k, "wallhanger").toFixed(1)} lb+</span><span class="ml-have">best ${rec.max} lb</span>`;
+      else right = `<span class="ml-need">not logged yet</span><span class="ml-have">wall-hanger: ${weightForGrade(k, "wallhanger").toFixed(1)} lb+</span>`;
+      return { k, def, isWall, gi: gi < 0 ? -1 : gi, html:
+        `<div class="mlRow ${isWall ? "done" : ""}"><span class="ml-art">${art}</span>
+          <span class="ml-name">${def.name.replace(/ \(.*/, "")}</span>
+          <span class="ml-right">${right}</span></div>` };
+    });
+    // in-progress first (closest to a wall-hanger up top), finished ones last
+    rows.sort((a, b) => (a.isWall - b.isWall) || (b.gi - a.gi) || a.def.name.localeCompare(b.def.name));
+    const banner = complete
+      ? `<div class="mlBanner done">📖 You finished the book. <b>Master Angler.</b><div class="mlb-sub">Every fish that swims this water, at the very top of its size. Nonc Baptiste is quiet about it, which is how you know.</div></div>`
+      : `<div class="mlBanner"><div class="ml-track"><div class="ml-fill" style="width:${Math.round(done / total * 100)}%"></div></div>
+          <div class="mlb-sub">${done}/${total} wall-hangers. The biggest of every kind. Chase it slow — it's meant to outlast a few seasons.</div></div>`;
+    $("ledgerBody").innerHTML = banner + rows.map(r => r.html).join("");
   }
 
   // Once, early on, name the reason to come back tomorrow out loud — the daily
@@ -685,6 +714,7 @@
     if ($("guidePanel").classList.contains("open")) renderGuide();
     if ($("jobsPanel").classList.contains("open")) renderBoard();
     if ($("campPanel").classList.contains("open")) renderCamp();
+    if ($("ledgerPanel").classList.contains("open")) renderLedger();
     renderDailyChip();
   }
 
@@ -717,6 +747,7 @@
 
   function buildPhotoSVG(d) {
     const l = D.LOCATIONS.find(x => x.id === d.locId) || loc();
+    const master = !!(state.flags2 && state.flags2.masterAngler); // finished the book → gilded frame
     const skyH = 815;
     const dateStr = new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
     const ribbon = d.legendary ? "LEGENDARY" : (d.pb ? "PERSONAL BEST" : "");
@@ -751,7 +782,9 @@
         <text x="40" y="2" font-family="Georgia,serif" font-style="italic" font-size="34" fill="#f2e8d5">Bayou <tspan fill="#e8c170">Lines</tspan></text>
       </g>
       ${ribbonEl}
-      <rect x="14" y="14" width="${PHOTO_W - 28}" height="${PHOTO_H - 28}" rx="28" fill="none" stroke="rgba(232,193,112,.4)" stroke-width="3"/>
+      ${master ? `<rect x="10" y="10" width="${PHOTO_W - 20}" height="${PHOTO_H - 20}" rx="30" fill="none" stroke="#e8c170" stroke-width="5"/>
+        <text x="${PHOTO_W - 60}" y="${PHOTO_H - 34}" text-anchor="end" font-family="Georgia,serif" font-style="italic" font-size="22" fill="#e8c170">Master Angler</text>` : ""}
+      <rect x="14" y="14" width="${PHOTO_W - 28}" height="${PHOTO_H - 28}" rx="28" fill="none" stroke="rgba(232,193,112,${master ? ".7" : ".4"})" stroke-width="3"/>
     </svg>`;
   }
   function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
@@ -1102,6 +1135,7 @@
   function gate(l) {
     if (!l.unlock) return { open: true, rows: [] };
     const u = l.unlock, rows = [];
+    if (u.ghost) rows.push({ met: !!state.ghost.caught, text: "stand with the Gray Ghost" });
     if (u.bucks) rows.push({ met: state.bucks >= u.bucks, text: `${u.bucks} ₿ permit` });
     if (u.boatTier) {
       const need = D.EQUIPMENT.boat.find(b => b.tier === u.boatTier);
@@ -1137,7 +1171,10 @@
   }
 
   function renderTravel() {
-    $("travelBody").innerHTML = trotlineCardHTML() + D.LOCATIONS.map(l => {
+    // postgame waters stay off the map entirely until their reveal (e.g. the
+    // Gray Ghost's swamp) — so appearing is a moment, not a greyed-out teaser.
+    const visible = D.LOCATIONS.filter(l => !(l.unlock && l.unlock.ghost) || state.ghost.caught || isUnlocked(l.id));
+    $("travelBody").innerHTML = trotlineCardHTML() + visible.map(l => {
       const here = l.id === state.locationId;
       const unlocked = isUnlocked(l.id);
       const g = gate(l);
@@ -1751,7 +1788,49 @@
       speciesCaughtCount: () => Object.keys(state.caught).length,
       speciesTotalCount: () => ALL_REFS.size,
       gradeAtLeastCount: minId => gradeAtLeastCount(minId),
+      hasUnlocked: id => state.unlocked.includes(id),
+      wallhangerCount: () => wallhangerCount(),
+      ledgerTotal: () => ledgerSpecies().length,
     };
+  }
+
+  /* ---------- MASTER ANGLER LEDGER (postgame long-arc) ----------
+     The book: a wall-hanger of every regular species. Built entirely on the
+     Cycle-2 size grades, so it costs no new save state beyond the milestones
+     already paid. A months-long, no-pressure pursuit that outlasts the story. */
+  function ledgerSpecies() { return GUIDE_FISH; } // the 31 regular species (legendaries are their own hunt)
+  function wallhangerCount() { const top = D.GRADES.length - 1; return ledgerSpecies().filter(k => gradeIndexOf(k) === top).length; }
+  const MASTER_MILESTONES = [
+    { at: 5, reward: 500, note: "five wall-hangers — the book's got your name in it now" },
+    { at: 10, reward: 1200, note: "ten wall-hangers — Baptiste is telling people about you" },
+    { at: 20, reward: 3000, note: "twenty wall-hangers — you're most of the way to the whole book" },
+  ];
+  function checkMaster() {
+    const n = wallhangerCount();
+    state.master = state.master || { awarded: [] };
+    const total = ledgerSpecies().length;
+    for (const m of MASTER_MILESTONES) {
+      if (n >= m.at && !state.master.awarded.includes("m" + m.at)) {
+        state.master.awarded.push("m" + m.at);
+        state.bucks += m.reward;
+        toastMaster(m.reward, m.note);
+        save(); updateStats();
+      }
+    }
+    if (n >= total && !state.master.awarded.includes("full")) {
+      state.master.awarded.push("full");
+      state.bucks += 10000; state.flags2.masterAngler = true;
+      toastMaster(10000, "the whole book — you are a Master Angler");
+      save(); updateStats();
+    }
+  }
+  function toastMaster(reward, note) {
+    const el = document.createElement("div");
+    el.className = "toast bounty-toast";
+    el.innerHTML = `<span class="t-icon">📖</span><span><span class="t-label">Master Angler's Book</span>${esc(note)} · +${reward} ₿</span>`;
+    $("toasts").appendChild(el);
+    setTimeout(() => el.remove(), 6000);
+    setTimeout(() => sfx("chime"), 120);
   }
 
   function checkAchievements() {
@@ -1860,6 +1939,7 @@
   $("jobsBtn").addEventListener("click", () => { renderBoard(); openPanel("jobsPanel"); });
   $("campBtn").addEventListener("click", () => { renderCamp(); openPanel("campPanel"); closeMore(); });
   $("journalBtn").addEventListener("click", () => { renderJournal(); openPanel("journalPanel"); closeMore(); });
+  $("ledgerBtn").addEventListener("click", () => { renderLedger(); openPanel("ledgerPanel"); closeMore(); });
 
   // the "More" overflow menu
   function closeMore() { $("moreMenu").classList.remove("open"); }

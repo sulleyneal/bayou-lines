@@ -569,6 +569,26 @@ h1 em{font-style:italic;font-weight:400;color:var(--lantern)}
 .g-nudge{font-size:10px;color:var(--cream-dim);margin-top:2px;letter-spacing:.02em}
 .g-nudge.maxed{color:var(--lantern)}
 
+/* ============ MASTER ANGLER LEDGER ============ */
+.mlBanner{padding:13px 15px;border-radius:14px;margin-bottom:14px;
+  border:1px solid var(--ui-border);background:rgba(232,193,112,.05)}
+.mlBanner.done{border-color:var(--lantern);background:linear-gradient(180deg,rgba(232,193,112,.18),rgba(216,85,63,.06))}
+.mlBanner.done b{color:var(--lantern)}
+.ml-track{height:8px;border-radius:999px;background:rgba(232,193,112,.14);overflow:hidden;margin-bottom:8px}
+.ml-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--good),var(--lantern));transition:width .4s ease}
+.mlb-sub{font-size:10.5px;color:var(--cream-dim);line-height:1.55}
+.mlRow{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:11px;margin-bottom:6px;
+  border:1px solid rgba(232,193,112,.1);background:rgba(232,193,112,.02)}
+.mlRow.done{border-color:rgba(232,193,112,.4);background:rgba(232,193,112,.07)}
+.ml-art{width:42px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.ml-art .fishart{width:100%;height:auto}
+.ml-name{font-size:12.5px;color:var(--cream);flex:1;min-width:0}
+.mlRow.done .ml-name{color:var(--lantern)}
+.ml-right{text-align:right;flex-shrink:0;display:flex;flex-direction:column;gap:1px}
+.ml-done{font-size:11px;color:var(--lantern)}
+.ml-need{font-size:10.5px;color:var(--accent)}
+.ml-have{font-size:9.5px;color:var(--cream-dim)}
+
 /* ============ TACKLE BOX (achievements) ============ */
 .achGrid{display:flex;flex-direction:column;gap:8px}
 .achRow{

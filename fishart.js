@@ -79,6 +79,8 @@
     bullred:     { arch: "redfish", back: "#c87f33", belly: "#f0dcae", fin: "#a5611f", pattern: "none", tailEye: "#1c1c1c", legend: true, big: true },
     // the white whale: pale, ancient, scarred, faintly luminous
     grayghost:   { arch: "gar", back: "#8a93a0", belly: "#e8ecee", fin: "#6b7682", pattern: "mottle", pat: "#aab2bc", legend: true, big: true },
+    // the Ghost's kin — paler still, a heavy old catfish-shaped thing
+    haint:       { arch: "catfish", back: "#a9b6c0", belly: "#eef3f5", fin: "#899aa4", pattern: "mottle", pat: "#c4cdd4", legend: true, big: true },
   };
 
   const VB_W = 130, VB_H = 70, MY = 35;

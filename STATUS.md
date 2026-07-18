@@ -1,5 +1,14 @@
 # Bayou Lines — build status
 
+> **✅ BAR MET — signed off.** A fourth independent fresh-context checker drove
+> the merged live build and could not fail any of the seven done-bar items
+> (cold-open first fish 5.5s · week-two reveal · postgame long-arc · lossless
+> migration · frame pacing median 16.7ms / 0.32% >50ms · ~82 KB gzipped ·
+> plays offline · voice 0/20 generic · 0 exceptions / 0 SVG-NaN). Four coherent
+> increments shipped to `master`, each merged only after a checker pass. The
+> loop converged: the checker genuinely cannot find a failing test.
+
+
 Goal: take Bayou Lines from a very good personal project to the best slow
 fishing game on the open web. Working the loop: **build → check → find the
 biggest gap → close it → repeat.** House rules (the chill covenant, the voice,
